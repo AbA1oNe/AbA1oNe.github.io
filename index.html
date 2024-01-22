@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加減按鈕</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            position: relative;
+            background-color: #f0f0f0; /* 背景顏色 */
+        }
+
+        .top-text, .bottom-text, .left-text, .right-text {
+            position: absolute;
+            text-align: center;
+        }
+
+        #user1 {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #user2 {
+            position: absolute;
+            bottom: 20%;
+            left: 50%;
+            transform: translateX(- 50%);
+        }
+
+        #user3 {
+            position: absolute;
+            top: 50%;
+            left: 30%;
+            transform: translateY(-50%);
+        }
+
+        #user4 {
+            position: absolute;
+            top: 50%;
+            right: 30%;
+            transform: translateY(-50%);
+        }
+
+        #game-board {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            border: 2px solid #333;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            gap: 10px;
+            background-color: #fff; /* 框框背景顏色 */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* 框框陰影效果 */
+        }
+
+        .user1-add { grid-row: 1; grid-column: 3; }
+        .user2-add { grid-row: 6; grid-column: 3; }
+        .user3-add { grid-row: 3; grid-column: 1; }
+        .user4-add { grid-row: 3; grid-column: 6; }
+        .user1-minus { grid-row: 1; grid-column: 4; }
+        .user2-minus { grid-row: 6; grid-column: 4; }
+        .user3-minus { grid-row: 4; grid-column: 1; }
+        .user4-minus { grid-row: 4; grid-column: 6; }
+
+        button {
+            font-size: 16px;
+            padding: 10px 15px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #reset {
+            font-size: 16px;
+            padding: 10px 15px;
+            cursor: pointer;
+            background-color: #d76311;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #input-container {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #input-container input {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="input-container">
+        <input type="text" id="user1-input" placeholder="使用者 1">
+        <input type="text" id="user2-input" placeholder="使用者 2">
+        <input type="text" id="user3-input" placeholder="使用者 3">
+        <input type="text" id="user4-input" placeholder="使用者 4">
+        <button id="reset" onclick="reset()">重置</button>
+    </div>
+    <div id="game-board">
+        <button class="user1-add" onclick="addScore(1, 5)">+5</button>
+        <button class="user2-add" onclick="addScore(2, 5)">+5</button>
+        <button class="user3-add" onclick="addScore(3, 5)">+5</button>
+        <button class="user4-add" onclick="addScore(4, 5)">+5</button>
+
+        <button class="user1-minus" onclick="addScore(1, -5)">-5</button>
+        <button class="user2-minus" onclick="addScore(2, -5)">-5</button>
+        <button class="user3-minus" onclick="addScore(3, -5)">-5</button>
+        <button class="user4-minus" onclick="addScore(4, -5)">-5</button>
+    </div>
+    <div class="user-score" id="user1">使用者 1: 0</div>
+    <div class="user-score" id="user2">使用者 2: 0</div>
+    <div class="user-score" id="user3">使用者 3: 0</div>
+    <div class="user-score" id="user4">使用者 4: 0</div>
+    
+
+    <script>
+        // 初始結果為0
+        let totalScore = new Array(0, 0, 0, 0);
+
+        // 函數處理加減按鈕
+        function addScore(user, value) {
+            // 更新總分數
+            totalScore[user-1] += value;
+
+            // 更新各使用者分數
+            document.getElementById(`user${user}`).innerText = `${document.getElementById(`user${user}-input`).value}: ${totalScore[user-1]}`;
+        }
+
+        // Add an event listener to the input boxes
+        document.querySelectorAll('input').forEach(function(input, index) {
+            input.addEventListener('input', function() {
+                updateOutput(index + 1, input.value);
+            });
+        });
+
+        // Function to update the output container
+        function updateOutput(inputNumber, value) {
+            // Get the output container element
+            const outputContainer = document.getElementById(`user${inputNumber}`);
+
+            // Update the content of the output container
+            outputContainer.innerHTML = `${value}: ${totalScore[inputNumber-1]}`;
+        }
+
+        function reset() {
+            totalScore = new Array(0, 0, 0, 0);
+            for (let index = 1; index <= 4; index++) {
+                document.getElementById(`user${index}-input`).value = ""
+                document.getElementById(`user${index}`).innerText = `使用者 ${index}: 0`
+            }
+        }
+    </script>
+
+</body>
+</html>
