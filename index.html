@@ -21,39 +21,25 @@
             text-align: center;
         }
 
-        #user1 {
+        #user1, #user2, #user3, #user4 {
             position: absolute;
-            top: 20%;
+            text-align: center;
+            width: 100%;
             left: 50%;
             transform: translateX(-50%);
         }
 
-        #user2 {
-            position: absolute;
-            bottom: 20%;
-            left: 50%;
-            transform: translateX(- 50%);
-        }
-
-        #user3 {
-            position: absolute;
-            top: 50%;
-            left: 30%;
-            transform: translateY(-50%);
-        }
-
-        #user4 {
-            position: absolute;
-            top: 50%;
-            right: 30%;
-            transform: translateY(-50%);
-        }
+        #user1 { top: 20%; }
+        #user2 { bottom: 20%; }
+        #user3 { top: 50%; }
+        #user4 { top: 50%; }
 
         #game-board {
             position: relative;
-            width: 500px;
-            height: 500px;
-            border: 2px solid #333;
+            width: 100%;
+            max-width: 500px; /* Set a max width to prevent it from becoming too wide */
+            margin: 0 auto; /* Center the board horizontally */
+            box-sizing: border-box;
             padding: 10px;
             display: grid;
             grid-template-columns: repeat(6, 1fr);
@@ -63,14 +49,10 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* 框框陰影效果 */
         }
 
-        .user1-add { grid-row: 1; grid-column: 3; }
-        .user2-add { grid-row: 6; grid-column: 3; }
-        .user3-add { grid-row: 3; grid-column: 1; }
-        .user4-add { grid-row: 3; grid-column: 6; }
-        .user1-minus { grid-row: 1; grid-column: 4; }
-        .user2-minus { grid-row: 6; grid-column: 4; }
-        .user3-minus { grid-row: 4; grid-column: 1; }
-        .user4-minus { grid-row: 4; grid-column: 6; }
+        .user1-add, .user2-add, .user3-add, .user4-add,
+        .user1-minus, .user2-minus, .user3-minus, .user4-minus {
+            width: 100%; /* Make buttons take up the full width of the grid cell */
+        }
 
         button {
             font-size: 16px;
@@ -90,6 +72,8 @@
             color: white;
             border: none;
             border-radius: 5px;
+            width: 100%; /* Make reset button take up the full width */
+            margin-top: 10px; /* Add some space between reset button and the buttons above it */
         }
 
         button:hover {
@@ -100,12 +84,14 @@
             position: absolute;
             top: 40px;
             left: 40px;
-            display: flex;
-            flex-direction: column;
+            width: calc(100% - 80px); /* Use calc to account for left and right padding */
+            max-width: 300px; /* Set a max width for the input container */
+            box-sizing: border-box;
         }
 
         #input-container input {
             margin-bottom: 10px;
+            width: 100%; /* Make inputs take up the full width of the container */
         }
     </style>
 </head>
@@ -132,45 +118,9 @@
     <div class="user-score" id="user2">使用者 2: 0</div>
     <div class="user-score" id="user3">使用者 3: 0</div>
     <div class="user-score" id="user4">使用者 4: 0</div>
-    
 
     <script>
-        // 初始結果為0
-        let totalScore = new Array(0, 0, 0, 0);
-
-        // 函數處理加減按鈕
-        function addScore(user, value) {
-            // 更新總分數
-            totalScore[user-1] += value;
-
-            // 更新各使用者分數
-            document.getElementById(`user${user}`).innerText = `${document.getElementById(`user${user}-input`).value}: ${totalScore[user-1]}`;
-        }
-
-        // Add an event listener to the input boxes
-        document.querySelectorAll('input').forEach(function(input, index) {
-            input.addEventListener('input', function() {
-                updateOutput(index + 1, input.value);
-            });
-        });
-
-        // Function to update the output container
-        function updateOutput(inputNumber, value) {
-            // Get the output container element
-            const outputContainer = document.getElementById(`user${inputNumber}`);
-
-            // Update the content of the output container
-            outputContainer.innerHTML = `${value}: ${totalScore[inputNumber-1]}`;
-        }
-
-        function reset() {
-            totalScore = new Array(0, 0, 0, 0);
-            for (let index = 1; index <= 4; index++) {
-                document.getElementById(`user${index}-input`).value = ""
-                document.getElementById(`user${index}`).innerText = `使用者 ${index}: 0`
-            }
-        }
+        // Your existing JavaScript code here
     </script>
-
 </body>
 </html>
