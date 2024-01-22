@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mahjong Cards</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        button {
+            font-size: 24px;
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+    <script>
+        // Generate an array of Mahjong card Unicode characters
+        const mahjongCards = [
+            "🀇", "🀈", "🀉", "🀊", "🀋", "🀌", "🀍", "🀎", "🀏", "🀐",
+            "🀙", "🀚", "🀛", "🀜", "🀝", "🀞", "🀟", "🀠", "🀡", "🀇",
+            // Add more Mahjong cards as needed
+        ];
+
+        // Function to create Mahjong card buttons
+        function createMahjongButtons() {
+            const body = document.body;
+
+            mahjongCards.forEach((card, index) => {
+                const button = document.createElement('button');
+                button.textContent = card;
+                button.addEventListener('click', () => alert(`Clicked on ${card}`));
+                body.appendChild(button);
+            });
+        }
+
+        // Call the function to create Mahjong buttons
+        createMahjongButtons();
+    </script>
+
+</body>
+</html>
