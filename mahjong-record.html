@@ -8,20 +8,29 @@
         body {
             font-family: 'Arial', sans-serif;
             display: flex;
-            flex-wrap: wrap;
+            align-items: center;
             justify-content: center;
+            height: 100vh;
+            margin: 0;
             padding: 20px;
+            flex-wrap: wrap; /* Allow items to wrap onto multiple lines */
+        }
+
+        .card-container {
+            display: flex;
+            margin-bottom: 10px;
+            flex-basis: 100%;
         }
 
         button {
             font-size: 24px;
             padding: 10px 15px;
-            margin: 5px;
             cursor: pointer;
             background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 5px;
+            margin: 5px;
         }
 
         button:hover {
@@ -32,26 +41,32 @@
 <body>
 
     <script>
-        // Generate an array of Mahjong card Unicode characters
-        const mahjongCards = [
-            "🀇", "🀈", "🀉", "🀊", "🀋", "🀌", "🀍", "🀎", "🀏", "🀐",
-            "🀙", "🀚", "🀛", "🀜", "🀝", "🀞", "🀟", "🀠", "🀡", "🀇",
-            // Add more Mahjong cards as needed
-        ];
+        const characters = ["🀇", "🀈", "🀉", "🀊", "🀋", "🀌", "🀍", "🀎", "🀏"];
+        const bamboo = ["🀐", "🀑", "🀒", "🀓", "🀔", "🀕", "🀖", "🀗", "🀘"];
+        const dots = ["🀙", "🀚", "🀛", "🀜", "🀝", "🀞", "🀟", "🀠", "🀡"];
+        const winds = ["🀀", "🀁", "🀂", "🀃"];
+        const dragons = ["🀄", "🀅", "🀆"];
 
-        // Function to create Mahjong card buttons
+        const mahjongCards = [characters, bamboo, dots, winds, dragons];
+
         function createMahjongButtons() {
             const body = document.body;
 
-            mahjongCards.forEach((card, index) => {
-                const button = document.createElement('button');
-                button.textContent = card;
-                button.addEventListener('click', () => alert(`Clicked on ${card}`));
-                body.appendChild(button);
+            mahjongCards.forEach(category => {
+                const container = document.createElement('div');
+                container.className = 'card-container';
+
+                category.forEach(card => {
+                    const button = document.createElement('button');
+                    button.textContent = card;
+                    button.addEventListener('click', () => alert(`Clicked on ${card}`));
+                    container.appendChild(button);
+                });
+
+                body.appendChild(container);
             });
         }
 
-        // Call the function to create Mahjong buttons
         createMahjongButtons();
     </script>
 
