@@ -66,14 +66,14 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* 框框陰影效果 */
         }
 
-        .user1-add { grid-row: 1; grid-column: 3; }
-        .user2-add { grid-row: 6; grid-column: 3; }
-        .user3-add { grid-row: 3; grid-column: 1; }
-        .user4-add { grid-row: 3; grid-column: 6; }
-        .user1-minus { grid-row: 1; grid-column: 4; }
-        .user2-minus { grid-row: 6; grid-column: 4; }
-        .user3-minus { grid-row: 4; grid-column: 1; }
-        .user4-minus { grid-row: 4; grid-column: 6; }
+        #user1-add { grid-row: 1; grid-column: 3; height: 70px; width: 120px;}
+        #user2-add { grid-row: 6; grid-column: 3; height: 70px; width: 120px;}
+        #user3-add { grid-row: 3; grid-column: 1; height: 70px; width: 120px;}
+        #user4-add { grid-row: 3; grid-column: 6; height: 70px; width: 120px;}
+        .user1-submit { grid-row: 1; grid-column: 4; height: 70px; width: 120px;}
+        .user2-submit { grid-row: 6; grid-column: 4; height: 70px; width: 120px;}
+        .user3-submit { grid-row: 4; grid-column: 1; height: 70px; width: 120px;}
+        .user4-submit { grid-row: 4; grid-column: 6; height: 70px; width: 120px;}
 
         button {
             font-size: 16px;
@@ -117,30 +117,28 @@
             width: 100%; /* Make input fields and button fill the container */
         }
 
-        .user1-add, .user2-add, .user3-add, .user4-add,
-.user1-minus, .user2-minus, .user3-minus, .user4-minus {
-    width: 100%; /* Make buttons fill the container */
-}
+        
     </style>
 </head>
 <body>
     <div id="input-container">
-        <input type="text" id="user1-input" placeholder="使用者 1">
-        <input type="text" id="user2-input" placeholder="使用者 2">
-        <input type="text" id="user3-input" placeholder="使用者 3">
-        <input type="text" id="user4-input" placeholder="使用者 4">
-        <button id="reset" onclick="reset()">重置</button>
+        <input type="text" id="user1-input" class="user-name" placeholder="使用者 1">
+        <input type="text" id="user2-input" class="user-name" placeholder="使用者 2">
+        <input type="text" id="user3-input" class="user-name" placeholder="使用者 3">
+        <input type="text" id="user4-input" class="user-name" placeholder="使用者 4">
+        <button id="reset" onclick="reset()" type="reset">重置</button>
     </div>
     <div id="game-board">
-        <button class="user1-add" onclick="addScore(1, 5)">+5</button>
-        <button class="user2-add" onclick="addScore(2, 5)">+5</button>
-        <button class="user3-add" onclick="addScore(3, 5)">+5</button>
-        <button class="user4-add" onclick="addScore(4, 5)">+5</button>
-
-        <button class="user1-minus" onclick="addScore(1, -5)">-5</button>
-        <button class="user2-minus" onclick="addScore(2, -5)">-5</button>
-        <button class="user3-minus" onclick="addScore(3, -5)">-5</button>
-        <button class="user4-minus" onclick="addScore(4, -5)">-5</button>
+        
+        <input type="number" id="user1-add" placeholder="0">
+        <input type="number" id="user2-add" placeholder="0">
+        <input type="number" id="user3-add" placeholder="0">
+        <input type="number" id="user4-add" placeholder="0">
+        <button class="user1-submit" onclick="addScore(1, parseInt(document.getElementById('user1-add').value))" type="submit">submit</button>
+        <button class="user2-submit" onclick="addScore(2, parseInt(document.getElementById('user2-add').value))" type="submit">submit</button>
+        <button class="user3-submit" onclick="addScore(3, parseInt(document.getElementById('user3-add').value))" type="submit">submit</button>
+        <button class="user4-submit" onclick="addScore(4, parseInt(document.getElementById('user4-add').value))" type="submit">submit</button>
+        
     </div>
     <div class="user-score" id="user1">使用者 1: 0</div>
     <div class="user-score" id="user2">使用者 2: 0</div>
@@ -159,10 +157,11 @@
 
             // 更新各使用者分數
             document.getElementById(`user${user}`).innerText = `${document.getElementById(`user${user}-input`).value}: ${totalScore[user-1]}`;
+            document.getElementById(`user${user}-add`).value = null
         }
 
         // Add an event listener to the input boxes
-        document.querySelectorAll('input').forEach(function(input, index) {
+        document.querySelectorAll('.user-name').forEach(function(input, index) {
             input.addEventListener('input', function() {
                 updateOutput(index + 1, input.value);
             });
