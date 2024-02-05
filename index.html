@@ -145,10 +145,28 @@
     <div class="user-score" id="user3">使用者 3: 0</div>
     <div class="user-score" id="user4">使用者 4: 0</div>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script type="module">
+        import data from "./record.json" assert {type : 'json'};
+        const fs = require('fs');
 
-    <script>
+        // Read the contents of the JSON file
+        const data = fs.readFileSync('record.json');
+        // Parse the JSON data into a JavaScript object
+        const jsonData = JSON.parse(data);
+
+        jsonData.蕭.total = 1
+
+        const jsonString = JSON.stringify(jsonData);
+
+        fs.writeFileSync('data.json', jsonString, 'utf-8', (err) => {
+        if (err) throw err;
+        console.log('Data added to file');
+        });
+        
         // 初始結果為0
         let totalScore = new Array(0, 0, 0, 0);
+
 
         // 函數處理加減按鈕
         function addScore(user, value) {
@@ -176,6 +194,7 @@
             outputContainer.innerHTML = `${value}: ${totalScore[inputNumber-1]}`;
         }
 
+        // Function to reset the calculator but doesn't submit the record to json file
         function reset() {
             totalScore = new Array(0, 0, 0, 0);
             for (let index = 1; index <= 4; index++) {
@@ -183,6 +202,26 @@
                 document.getElementById(`user${index}`).innerText = `使用者 ${index}: 0`
             }
         }
+
+        function fetchJson() {
+            fetch("./record.json")
+                .then((res) => {
+                    if (!res.ok) {
+                        throw new Error
+                            (`HTTP error! Status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then((data) => 
+                      console.log(data))
+                .catch((error) => 
+                       console.error("Unable to fetch data:", error));
+        }
+        
+        // Function to reset the calculator and submit the record to json file
+        //function resetAndSubmit() {
+
+        //}
     </script>
 
 </body>
