@@ -127,6 +127,18 @@
         <input type="text" id="user3-input" class="user-name" placeholder="使用者 3">
         <input type="text" id="user4-input" class="user-name" placeholder="使用者 4">
         <button id="reset" onclick="reset()" type="reset">重置</button>
+
+        <div id="user蕭-daily-record">蕭: 0</div>
+        <br>
+        <div id="user盧-daily-record">盧: 0</div>
+        <br>
+        <div id="user林-daily-record">林: 0</div>
+        <br>
+        <div id="user蔡-daily-record">蔡: 0</div>
+        <br>
+        <div id="user猴-daily-record">猴: 0</div>
+        <br>
+        <div id="user呂-daily-record">呂: 0</div>
     </div>
     <div id="game-board">
         
@@ -145,23 +157,33 @@
     <div class="user-score" id="user3">使用者 3: 0</div>
     <div class="user-score" id="user4">使用者 4: 0</div>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script type="module">
-        const fs = require('fs');
-
-        // Read the contents of the JSON file
-        const data = fs.readFileSync('record.json');
-        // Parse the JSON data into a JavaScript object
-        const jsonData = JSON.parse(data);
-
-        jsonData.蕭.total = 1
-
-        const jsonString = JSON.stringify(jsonData);
-
-        fs.writeFileSync('data.json', jsonString, 'utf-8', (err) => {
-        if (err) throw err;
-        console.log('Data added to file');
-        });
+    <script>
+        var record = {
+            "蕭": {
+                "total": 0,
+                "daily": 0
+            },
+            "盧": {
+                "total": 0,
+                "daily": 0
+            },
+            "林": {
+                "total": 0,
+                "daily": 0
+            },
+            "蔡": {
+                "total": 0,
+                "daily": 0
+            },
+            "猴": {
+                "total": 0,
+                "daily": 0
+            },
+            "呂": {
+                "total": 0,
+                "daily": 0
+            }
+        }
         
         // 初始結果為0
         let totalScore = new Array(0, 0, 0, 0);
@@ -169,6 +191,10 @@
 
         // 函數處理加減按鈕
         function addScore(user, value) {
+            var name = document.getElementById(`user${user}-input`).value
+            record[name]["daily"] += parseInt(document.getElementById(`user${user}-add`).value)
+
+            document.getElementById(`user${document.getElementById(`user${user}-input`).value}-daily-record`).innerText = `${document.getElementById(`user${user}-input`).value}: ${record[name]["daily"]}`;
             // 更新總分數
             totalScore[user-1] += value;
 
@@ -201,26 +227,6 @@
                 document.getElementById(`user${index}`).innerText = `使用者 ${index}: 0`
             }
         }
-
-        function fetchJson() {
-            fetch("./record.json")
-                .then((res) => {
-                    if (!res.ok) {
-                        throw new Error
-                            (`HTTP error! Status: ${res.status}`);
-                    }
-                    return res.json();
-                })
-                .then((data) => 
-                      console.log(data))
-                .catch((error) => 
-                       console.error("Unable to fetch data:", error));
-        }
-        
-        // Function to reset the calculator and submit the record to json file
-        //function resetAndSubmit() {
-
-        //}
     </script>
 
 </body>
