@@ -128,17 +128,17 @@
         <input type="text" id="user4-input" class="user-name" placeholder="使用者 4">
         <button id="reset" onclick="reset()" type="reset">重置</button>
 
-        <div id="user蕭-daily-record">蕭: 0</div>
+        <div id="user蕭-record">蕭: 0 ( 今天: 0 )</div>
         <br>
-        <div id="user盧-daily-record">盧: 0</div>
+        <div id="user盧-record">盧: 0 ( 今天: 0 )</div>
         <br>
-        <div id="user林-daily-record">林: 0</div>
+        <div id="user林-record">林: 0 ( 今天: 0 )</div>
         <br>
-        <div id="user蔡-daily-record">蔡: 0</div>
+        <div id="user蔡-record">蔡: 0 ( 今天: 0 )</div>
         <br>
-        <div id="user猴-daily-record">猴: 0</div>
+        <div id="user猴-record">猴: 0 ( 今天: 0 )</div>
         <br>
-        <div id="user呂-daily-record">呂: 0</div>
+        <div id="user呂-record">呂: 0 ( 今天: 0 )</div>
     </div>
     <div id="game-board">
         
@@ -157,50 +157,32 @@
     <div class="user-score" id="user3">使用者 3: 0</div>
     <div class="user-score" id="user4">使用者 4: 0</div>
     
-    <script>
-        var record = {
-            "蕭": {
-                "total": 0,
-                "daily": 0
-            },
-            "盧": {
-                "total": 0,
-                "daily": 0
-            },
-            "林": {
-                "total": 0,
-                "daily": 0
-            },
-            "蔡": {
-                "total": 0,
-                "daily": 0
-            },
-            "猴": {
-                "total": 0,
-                "daily": 0
-            },
-            "呂": {
-                "total": 0,
-                "daily": 0
-            }
-        }
-        
+    <script type="text/javascript">
+        let record = ""
+        $(document).ready(function() {
+            $.getJSON("record.json", function(result) {
+                record = result
+            });
+        });
         // 初始結果為0
         let totalScore = new Array(0, 0, 0, 0);
-
 
         // 函數處理加減按鈕
         function addScore(user, value) {
             var name = document.getElementById(`user${user}-input`).value
-            record[name]["daily"] += parseInt(document.getElementById(`user${user}-add`).value)
-
-            document.getElementById(`user${document.getElementById(`user${user}-input`).value}-daily-record`).innerText = `${document.getElementById(`user${user}-input`).value}: ${record[name]["daily"]}`;
+            if (isNaN(value)) {
+                value = 0
+            }
+            
+            record[name]["daily"] += value
+            document.getElementById(`user${document.getElementById(`user${user}-input`).value}-record`).innerText = `${document.getElementById(`user${user}-input`).value}: 0 ( 今天: ${record[name]["daily"]} )`;
+            
             // 更新總分數
             totalScore[user-1] += value;
 
             // 更新各使用者分數
             document.getElementById(`user${user}`).innerText = `${document.getElementById(`user${user}-input`).value}: ${totalScore[user-1]}`;
-            document.getElementById(`user${user}-add`).value = null
+            document.getElementById(`user${user}-add`).value = ""
         }
 
         // Add an event listener to the input boxes
@@ -227,6 +209,14 @@
                 document.getElementById(`user${index}`).innerText = `使用者 ${index}: 0`
             }
         }
+
+        function updateRecord(user, value) {
+        fs.readFileSync('record.json')
+            .then((data) => {
+                data[user]["total"] += value;
+                data[user]["daily"] += value;
+            });
+        };
     </script>
 
 </body>
