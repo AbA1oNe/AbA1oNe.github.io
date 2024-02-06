@@ -157,6 +157,7 @@
     <div class="user-score" id="user3">使用者 3: 0</div>
     <div class="user-score" id="user4">使用者 4: 0</div>
     
+    <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
     <script type="text/javascript">
         let record = ""
         $(document).ready(function() {
@@ -209,14 +210,6 @@
                 document.getElementById(`user${index}`).innerText = `使用者 ${index}: 0`
             }
         }
-
-        function updateRecord(user, value) {
-        fs.readFileSync('record.json')
-            .then((data) => {
-                data[user]["total"] += value;
-                data[user]["daily"] += value;
-            });
-        };
     </script>
 
 </body>
