@@ -12,6 +12,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
+        flex-direction: column;
         height: 100vh;
         background-color: #6a287b;
     }
@@ -37,18 +38,26 @@
         background-color: #000000;
     }
 
-    #text-section {
+    #text-section,
+    #output-section,
+    #input-section {
         margin-top: 20px;
         text-align: center;
         font-size: 18px;
         color: #fff;
     }
 
-    #output-section {
-        margin-top: 20px;
-        text-align: center;
-        font-size: 18px;
-        color: #fff;
+    #input-section input[type="text"] {
+        padding: 5px;
+        margin-right: 10px;
+    }
+
+    #input-section input[type="submit"] {
+        padding: 5px 10px;
+        cursor: pointer;
+        background-color: #4CAF50;
+        border: none;
+        color: white;
     }
 </style>
 </head>
@@ -87,6 +96,10 @@
 
 <div id="text-section"></div>
 <div id="output-section"></div>
+<div id="input-section">
+    <input type="text" id="input-text" placeholder="Enter Text">
+    <input type="submit" value="Submit" onclick="submitInput()">
+</div>
 
 <script>
     var gridContents = [
@@ -131,7 +144,48 @@
         outputSection.innerHTML = text;
     }
 
-    // Initial update of the text section
+    function submitInput() {
+        var inputText = document.getElementById("input-text").value;
+        // Split the input text by whitespace
+        var inputArray = inputText.split(/\s+/);
+        
+        // Update gridContents based on the input
+        for (var i = 0; i < gridContents.length; i++) {
+            for (var j = 0; j < gridContents[i].length; j++) {
+                // If there's enough input, update the gridContents
+                if (inputArray.length > 0) {
+                    gridContents[i][j] = inputArray[j*5+i];
+                    gridOutput[j*5+i] = inputArray[j*5+i];
+                }
+            }
+        }
+
+        // Update grid container with new block contents
+        var gridContainer = document.querySelector('.grid-container');
+        gridContainer.innerHTML = ''; // Clear existing blocks
+
+        // Create new blocks based on gridContents
+        for (var i = 0; i < gridContents.length; i++) {
+            for (var j = 0; j < gridContents[i].length; j++) {
+                var block = document.createElement('div');
+                block.className = 'block';
+                if (inputArray[j*5+i] == 0) {
+                    block.classList.add("clicked");
+                }
+                
+                if (inputArray[j*5+i] == 1) {
+                    block.classList.remove("clicked")
+                }
+                block.textContent = "x" + ((j*5)+i);
+                block.setAttribute('onclick', 'blockClicked(this, ' + i + ', ' + j + ')');
+                gridContainer.appendChild(block);
+            }
+        }
+
+        updateTextSection();
+        outputTextSection();
+    }
+
     updateTextSection();
     outputTextSection();
 </script>
