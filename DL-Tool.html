@@ -104,12 +104,12 @@
         if (!block.classList.contains("clicked")) {
             block.classList.add("clicked");
             gridContents[row][col] = "0";
-            gridOutput[row*5 + col] = "0";
+            gridOutput[col*5 + row] = "0";
         }
         else if (block.classList.contains("clicked")) {
             block.classList.remove("clicked");
             gridContents[row][col] = "1";
-            gridOutput[row*5 + col] = "1";
+            gridOutput[col*5 + row] = "1";
         }
         updateTextSection();
         outputTextSection();
