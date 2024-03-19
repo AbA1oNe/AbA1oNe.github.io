@@ -176,7 +176,7 @@
                 if (inputArray[j*5+i] == 1) {
                     block.classList.remove("clicked")
                 }
-                block.textContent = "x" + ((j*5)+i);
+                block.textContent = "x" + ((j*5)+i+1);
                 block.setAttribute('onclick', 'blockClicked(this, ' + i + ', ' + j + ')');
                 gridContainer.appendChild(block);
             }
