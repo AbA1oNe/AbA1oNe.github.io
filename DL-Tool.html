@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DL-Blocks-Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -40,7 +41,7 @@
 
     #text-section,
     #output-section,
-    #input-section {
+    #input-section{
         margin-top: 20px;
         text-align: center;
         font-size: 18px;
@@ -49,6 +50,7 @@
 
     #input-section input[type="text"] {
         padding: 5px;
+        margin-top: 70px;
         margin-right: 10px;
     }
 
@@ -59,11 +61,19 @@
         border: none;
         color: white;
     }
+
+    .wrapper{
+        display: flex;
+        flex-direction: row;
+        gap: 30px;
+    }
+
 </style>
 </head>
 <body>
 
-<div class="grid-container">
+<div class="wrapper">
+    <div class="grid-container">
     <!-- Creating 25 clickable blocks -->
     <!-- You can change the content inside the blocks by editing the text between the <div> tags -->
     <!-- You can also add event listeners to make them clickable -->
@@ -92,13 +102,15 @@
     <div class="block" onclick="blockClicked(this, 4, 2)">x15</div>
     <div class="block" onclick="blockClicked(this, 4, 3)">x20</div>
     <div class="block" onclick="blockClicked(this, 4, 4)">x25</div>
-</div>
-
-<div id="text-section"></div>
-<div id="output-section"></div>
-<div id="input-section">
-    <input type="text" id="input-text" placeholder="Enter Text">
-    <input type="submit" value="Submit" onclick="submitInput()">
+    </div>
+    <div id="text-section"></div>
+    <div id="output-section"></div>
+    <div id="input-section">
+        <input type="text" id="input-text" placeholder="Enter Text">
+        <input type="submit" value="Submit" onclick="submitInput()"><br><br>
+        <input type="file" name="input-file" id="input-file">
+        <input type="submit" value="Check" onclick="checknumber()">
+    </div>
 </div>
 
 <script>
@@ -184,6 +196,45 @@
 
         updateTextSection();
         outputTextSection();
+    }
+
+    function checknumber() {
+        const fileInput = document.getElementById('input-file');
+        const file = fileInput.files[0];
+        const queryString = document.querySelector("#output-section p").innerText
+        console.log(queryString);
+
+        if (file && queryString) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const csv = e.target.result;
+                const rows = csv.split('\n'); // Splitting CSV into rows
+
+                // Loop through each row
+                rows.forEach(row => {
+                    const cells = row.split(',').map(cell => cell.trim()); // Splitting row into cells and trimming whitespace
+                    const rowData = cells.filter(cell => cell !== '').slice(0, -1); // Filtering out empty cells
+
+                    // Joining the non-empty cells with ',' to match the format of the query string
+                    const rowString = rowData.join(',');
+                    //console.log(`rowString: ${rowString}`);
+
+                    // Check if the rowString matches the query string
+                    if (rowString == queryString) {
+                        console.log('Match found in CSV:', rowData);
+                        alert(`Already Existed: ${rowData}`)
+                    }
+                });
+
+                // Clear input field after processing the file
+                fileInput.value = '';
+            };
+
+            // Specify encoding explicitly as UTF-8
+            reader.readAsText(file, 'UTF-8');
+        } else {
+            alert('Please select a file and enter a query string.');
+        }
     }
 
     updateTextSection();
