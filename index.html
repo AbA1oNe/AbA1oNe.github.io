@@ -193,7 +193,7 @@
         <button class="user4-submit" onclick="addScore(4, parseInt(document.getElementById('user4-add').value), parseInt(document.getElementById('user4-add-choice').value))" type="submit">submit</button>
         
     </div>
-    <div class="user-score" id="user1">使用者 1: 0</div>
+    <div class="user-score" id="user1">使用者 1: 0 (莊: 0)</div>
     <label for="select2" class="user1-add">
     <select id="user1-add-choice" name="user1-add-choice">
         <option value="" selected>選擇胡牌類型</option>
@@ -201,7 +201,7 @@
         <option value=0>胡牌/放槍</option>
     </select>
     </label>
-    <div class="user-score" id="user2">使用者 2: 0</div>
+    <div class="user-score" id="user2">使用者 2: 0 (莊: 0)</div>
     <label for="select2" class="user2-add-choie">
     <select id="user2-add-choice" name="user2-add-choice">
         <option value="" selected>選擇胡牌類型</option>
@@ -209,7 +209,7 @@
         <option value=0>胡牌/放槍</option>
     </select>
     </label>
-    <div class="user-score" id="user3">使用者 3: 0</div>
+    <div class="user-score" id="user3">使用者 3: 0 (莊: 0)</div>
     <label for="select2" class="user3-add-choie">
     <select id="user3-add-choice" name="user3-add-choice">
         <option value="" selected>選擇胡牌類型</option>
@@ -217,7 +217,7 @@
         <option value=0>胡牌/放槍</option>
     </select>
     </label>
-    <div class="user-score" id="user4">使用者 4: 0</div>
+    <div class="user-score" id="user4">使用者 4: 0 (莊: 0)</div>
     <label for="select2" class="user4-add-choie">
     <select id="user4-add-choice" name="user4-add-choice">
         <option value="" selected>選擇胡牌類型</option>
@@ -273,6 +273,7 @@
         let totalScore = new Array(0, 0, 0, 0);
         // 莊家為1，閒家為0，若連莊則莊家+1
         let host = new Array(1, 0, 0, 0);
+        document.getElementById(`user${host.findIndex((element) => element >= 1)+1}`).style.color = "red"
 
         function nextHost() {
             let hostIndex = (host.findIndex((element) => element >= 1) + 1) % 4;
@@ -344,18 +345,22 @@
                     record[name]["daily"] += value * 3 + 5 * host[hostUser]; // because the 莊家 has to be dealt differently (more points)
                     // 更新總分數
                     totalScore[user-1] += value * 3 + 5 * host[hostUser];
+
+                    document.getElementById(`user${hostUser+1}`).style.color = "black"
                     nextHost();
+                    
                 }
             }
             for (let i = 1; i<=4; i++){
                 let temp = document.getElementById(`user${i}-input`).value
                 document.getElementById(`user${i}-record`).innerText = `${document.getElementById(`user${i}-input`).value}: 0 ( 今天: ${record[temp]["daily"]} | 自摸: ${record[temp]["self-win"]} | 胡牌: ${record[temp]["win"]} | 放槍: ${record[temp]["lose"]} )`;
                 // 更新各使用者分數
-                document.getElementById(`user${i}`).innerText = `${document.getElementById(`user${i}-input`).value}: ${totalScore[i-1]}`;
+                document.getElementById(`user${i}`).innerText = `${document.getElementById(`user${i}-input`).value}: ${totalScore[i-1]} (莊: ${host[i-1]})`;
+                document.getElementById(`user${i}`).style.color = "black"
                 document.getElementById(`user${i}-add`).value = ""
                 document.getElementById(`user${i}-add-choice`).value = ""
             }
-            console.log(host)
+            document.getElementById(`user${host.findIndex((element) => element >= 1)+1}`).style.color = "red"
         }
 
         // Add an event listener to the input boxes
@@ -371,7 +376,7 @@
             const outputContainer = document.getElementById(`user${inputNumber}`);
 
             // Update the content of the output container
-            outputContainer.innerHTML = `${value}: ${totalScore[inputNumber-1]}`;
+            outputContainer.innerHTML = `${value}: ${totalScore[inputNumber-1]}  (莊: ${host[inputNumber-1]})`;
         }
 
         // Function to reset the calculator but doesn't submit the record to json file
@@ -380,7 +385,7 @@
             for (let index = 1; index <= 4; index++) {
                 document.getElementById(`user${index}-input`).value = ""
                 document.getElementById(`user${index}-record`).innerText = ": 0 ( 今天: 0 | 自摸: 0 | 胡牌: 0 | 放槍: 0 )"
-                document.getElementById(`user${index}`).innerText = `使用者 ${index}: 0`
+                document.getElementById(`user${index}`).innerText = `使用者 ${index}: 0  (莊: ${host[index-1]})`
             }
         }
     </script>
