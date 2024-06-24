@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nested Select Lists</title>
+</head>
+<body>
+    <label for="primary">Primary List:</label>
+    <select id="primary" onchange="updateSecondary()">
+        <option value="">Select an option</option>
+        <option value="fruits">Fruits</option>
+        <option value="vegetables">Vegetables</option>
+    </select>
+
+    <label for="secondary">Secondary List:</label>
+    <select id="secondary">
+        <option value="">Select an option</option>
+    </select>
+
+    <script src="script.js"></script>
+</body>
+</html>
