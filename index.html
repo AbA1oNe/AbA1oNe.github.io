@@ -59,8 +59,8 @@
         #user2-add-choice {
             position: absolute;
             top: 15%;
-            left: 20%;
-            transform: translateX(-50%);
+            left: 18%;
+            transform: translateY(-50%);
         }
 
         #user4 {
@@ -73,8 +73,8 @@
         #user4-add-choice {
             position: absolute;
             top: 29%;
-            left: 20%;
-            transform: translateX(-50%);
+            left: 18%;
+            transform: translateY(-50%);
         }
 
         #game-board {
@@ -264,7 +264,10 @@
             // Add event listener to update record name based on input
             inputField.addEventListener('input', function() {
                 const name = this.value || `使用者 ${i}`;
-                document.getElementById(`user${i}-record`).innerHTML = `${name}: 0 ( 今天: 0 | 自摸: 0 | 胡牌: 0 | 放槍: 0 )`;
+                try {
+                    let temp = document.getElementById(`user${i}-input`).value;
+                    document.getElementById(`user${i}-record`).innerHTML = `${name}: 0 ( 今天: ${record[temp]["daily"]} | 自摸: ${record[temp]["self-win"]} | 胡牌: ${record[temp]["win"]} | 放槍: ${record[temp]["lose"]} )`;
+                } catch(e) {}  
             });
         }
 
@@ -274,8 +277,6 @@
                 record = result
             });
         });
-        // 初始結果為0
-        let totalScore = new Array(0, 0, 0, 0);
         // 莊家為1，閒家為0，若連莊則莊家+1
         let host = new Array(1, 0, 0, 0);
         document.getElementById(`user${host.findIndex((element) => element >= 1)+1}`).style.color = "red"
@@ -302,7 +303,6 @@
                 }
 
                 record[name]["daily"] += value
-                totalScore[user-1] += value;
                 // > 0 means win once
                 if (value > 0) {
                     if (host[user-1] >= 1) { // 連莊
@@ -331,13 +331,9 @@
                         if (i == user) continue; // ignore the winner in this loop
                         let temp = document.getElementById(`user${i}-input`).value
                         record[temp]["daily"] -= value
-                        // 更新總分數
-                        totalScore[i-1] -= value;
                     }
                     host[user-1] += 1;
                     record[name]["daily"] += value * 3;
-                    // 更新總分數
-                    totalScore[user-1] += value * 3;
                 } else { // if the player is not 莊家
                     if (isNaN(value)) {
                         alert("請輸入點數")
@@ -349,17 +345,12 @@
                             var hostUser = i-1; // get host player
                             let temp = document.getElementById(`user${i}-input`).value
                             record[temp]["daily"] -= value + 5 * host[hostUser]
-                            totalScore[i-1] -= (value + 5 * host[hostUser]);
                         } else { // deal with non-host losing players' points
                             let temp = document.getElementById(`user${i}-input`).value
                             record[temp]["daily"] -= value
-                            // 更新總分數
-                            totalScore[i-1] -= value;
                         }
                     }
                     record[name]["daily"] += value * 3 + 5 * host[hostUser]; // because the 莊家 has to be dealt differently (more points)
-                    // 更新總分數
-                    totalScore[user-1] += value * 3 + 5 * host[hostUser];
 
                     document.getElementById(`user${hostUser+1}`).style.color = "black"
                     nextHost();
@@ -377,7 +368,7 @@
                 let temp = document.getElementById(`user${i}-input`).value
                 document.getElementById(`user${i}-record`).innerText = `${document.getElementById(`user${i}-input`).value}: 0 ( 今天: ${record[temp]["daily"]} | 自摸: ${record[temp]["self-win"]} | 胡牌: ${record[temp]["win"]} | 放槍: ${record[temp]["lose"]} )`;
                 // 更新各使用者分數
-                document.getElementById(`user${i}`).innerText = `${document.getElementById(`user${i}-input`).value}: ${totalScore[i-1]} (莊: ${host[i-1]})`;
+                document.getElementById(`user${i}`).innerText = `${document.getElementById(`user${i}-input`).value}: ${record[temp]["daily"]} (莊: ${host[i-1]})`;
                 document.getElementById(`user${i}`).style.color = "black"
                 document.getElementById(`user${i}-add`).value = ""
                 document.getElementById(`user${i}-add-choice`).value = ""
@@ -396,14 +387,15 @@
         function updateOutput(inputNumber, value) {
             // Get the output container element
             const outputContainer = document.getElementById(`user${inputNumber}`);
-
-            // Update the content of the output container
-            outputContainer.innerHTML = `${value}: ${totalScore[inputNumber-1]}  (莊: ${host[inputNumber-1]})`;
+            try {
+                let temp = document.getElementById(`user${inputNumber}-input`).value
+                // Update the content of the output container
+                outputContainer.innerHTML = `${value}: ${record[temp]["daily"]}  (莊: ${host[inputNumber-1]})`;
+            } catch(e) {}
         }
 
         // Function to reset the calculator but doesn't submit the record to json file
         function reset() {
-            totalScore = new Array(0, 0, 0, 0);
             for (let index = 1; index <= 4; index++) {
                 document.getElementById(`user${index}-input`).value = ""
                 document.getElementById(`user${index}-record`).innerText = ": 0 ( 今天: 0 | 自摸: 0 | 胡牌: 0 | 放槍: 0 )"
