@@ -30,8 +30,8 @@
         }
         #user1-add-choice {
             position: absolute;
-            top: 8%;
-            left: 20%;
+            top: 13%;
+            left: 25%;
             transform: translateX(-50%);
         }
 
@@ -44,8 +44,8 @@
 
         #user3-add-choice {
             position: absolute;
-            top: 22%;
-            left: 20%;
+            top: 27%;
+            left: 25%;
             transform: translateX(-50%);
         }
 
@@ -58,8 +58,8 @@
 
         #user2-add-choice {
             position: absolute;
-            top: 15%;
-            left: 18%;
+            top: 21%;
+            left: 23%;
             transform: translateY(-50%);
         }
 
@@ -72,8 +72,8 @@
 
         #user4-add-choice {
             position: absolute;
-            top: 29%;
-            left: 18%;
+            top: 35%;
+            left: 23%;
             transform: translateY(-50%);
         }
 
@@ -165,6 +165,8 @@
 <body>
     <div id="input-container">
         <button id="reset" onclick="reset()" type="reset">重置</button>
+        <br>
+        <button id="reset" onclick="shufflePos()" type="button">抓位</button>
     </div>
     
     <div id="game-board">
@@ -364,15 +366,7 @@
                 host[user-1] += 1;
                 console.log(host)
             }
-            for (let i = 1; i<=4; i++){
-                let temp = document.getElementById(`user${i}-input`).value
-                document.getElementById(`user${i}-record`).innerText = `${document.getElementById(`user${i}-input`).value}: 0 ( 今天: ${record[temp]["daily"]} | 自摸: ${record[temp]["self-win"]} | 胡牌: ${record[temp]["win"]} | 放槍: ${record[temp]["lose"]} )`;
-                // 更新各使用者分數
-                document.getElementById(`user${i}`).innerText = `${document.getElementById(`user${i}-input`).value}: ${record[temp]["daily"]} (莊: ${host[i-1]})`;
-                document.getElementById(`user${i}`).style.color = "black"
-                document.getElementById(`user${i}-add`).value = ""
-                document.getElementById(`user${i}-add-choice`).value = ""
-            }
+            updateResult();
             document.getElementById(`user${host.findIndex((element) => element >= 1)+1}`).style.color = "red"
         }
 
@@ -389,9 +383,51 @@
             const outputContainer = document.getElementById(`user${inputNumber}`);
             try {
                 let temp = document.getElementById(`user${inputNumber}-input`).value
+            
                 // Update the content of the output container
                 outputContainer.innerHTML = `${value}: ${record[temp]["daily"]}  (莊: ${host[inputNumber-1]})`;
             } catch(e) {}
+        }
+
+        function updateResult() {
+            for (let i = 1; i<=4; i++){
+                let temp = document.getElementById(`user${i}-input`).value
+                document.getElementById(`user${i}-record`).innerText = `${document.getElementById(`user${i}-input`).value}: 0 ( 今天: ${record[temp]["daily"]} | 自摸: ${record[temp]["self-win"]} | 胡牌: ${record[temp]["win"]} | 放槍: ${record[temp]["lose"]} )`;
+                // 更新各使用者分數
+                document.getElementById(`user${i}`).innerText = `${document.getElementById(`user${i}-input`).value}: ${record[temp]["daily"]} (莊: ${host[i-1]})`;
+                document.getElementById(`user${i}`).style.color = "black"
+                document.getElementById(`user${i}-add`).value = ""
+                document.getElementById(`user${i}-add-choice`).value = ""
+            }
+            document.getElementById(`user${host.findIndex((element) => element >= 1)+1}`).style.color = "red"
+        }
+
+        function shufflePos() {
+            let pos = new Array();
+            for (let i = 1; i<=4; i++) {
+                let temp = document.getElementById(`user${i}-input`).value;
+                pos.push(temp);
+            }
+            let currentIndex = pos.length;
+            console.log(pos)
+            // While there remain elements to shuffle...
+            while (currentIndex != 0) {
+
+                // Pick a remaining element...
+                let randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+
+                // And swap it with the current element.
+                [pos[currentIndex], pos[randomIndex]] = [
+                pos[randomIndex], pos[currentIndex]];
+            }
+            console.log(pos)
+            for (let i = 1; i<=4; i++) {
+                console.log(document.getElementById(`user${i}-input`).value)
+                document.getElementById(`user${i}-input`).value = pos[i-1];
+                console.log(document.getElementById(`user${i}-input`).value)
+            }
+            updateResult();
         }
 
         // Function to reset the calculator but doesn't submit the record to json file
