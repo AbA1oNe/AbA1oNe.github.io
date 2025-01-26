@@ -167,6 +167,8 @@
         <button id="reset" onclick="reset()" type="reset">重置</button>
         <br>
         <button id="reset" onclick="shufflePos()" type="button">抓位</button>
+        <br>
+        <input tpye="number" id="extra">一台：</input>
     </div>
     
     <div id="game-board">
@@ -346,7 +348,7 @@
                         if (host[i-1] != 0) {
                             var hostUser = i-1; // get host player
                             let temp = document.getElementById(`user${i}-input`).value
-                            record[temp]["daily"] -= value + 5 * host[hostUser]
+                            record[temp]["daily"] -= value + document.getElementById('extra') * host[hostUser]
                         } else { // deal with non-host losing players' points
                             let temp = document.getElementById(`user${i}-input`).value
                             record[temp]["daily"] -= value
