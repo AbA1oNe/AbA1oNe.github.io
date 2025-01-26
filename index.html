@@ -348,7 +348,7 @@
                         if (host[i-1] != 0) {
                             var hostUser = i-1; // get host player
                             let temp = document.getElementById(`user${i}-input`).value
-                            record[temp]["daily"] -= value + document.getElementById('extra') * host[hostUser]
+                            record[temp]["daily"] -= value + document.getElementById('extra').value * host[hostUser]
                         } else { // deal with non-host losing players' points
                             let temp = document.getElementById(`user${i}-input`).value
                             record[temp]["daily"] -= value
