@@ -354,7 +354,7 @@
                             record[temp]["daily"] -= value
                         }
                     }
-                    record[name]["daily"] += value * 3 + 5 * host[hostUser]; // because the 莊家 has to be dealt differently (more points)
+                    record[name]["daily"] += value * 3 + document.getElementById('extra').value * host[hostUser]; // because the 莊家 has to be dealt differently (more points)
 
                     document.getElementById(`user${hostUser+1}`).style.color = "black"
                     nextHost();
