@@ -239,7 +239,7 @@
         
         for (let j = 1; j <= 4; j++) {
             const dropdown = document.getElementById(`user${j}-add`);
-            for (let i = -120; i <= 120; i+=5) {
+            for (let i = -300; i <= 300; i += document.getElementById('extra').value) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i;
