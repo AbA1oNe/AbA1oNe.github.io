@@ -187,7 +187,7 @@
                         if (localSeats) {
                             const seatsArray = JSON.parse(localSeats);
                             seatsArray.forEach(name => {
-                                if (name) allPlayerNames.add(name);
+                                if (name && !name.startsWith("玩家")) allPlayerNames.add(name);
                             });
                         }
                     } catch (e) {
@@ -297,4 +297,5 @@
         }).mount('#app');
     </script>
 </body>
+
 </html>
