@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🀄 麻將風雲榜</title>
+    <title>🀄 麻將風雲榜 (分頁版)</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -131,11 +131,17 @@
                 const logs = ref([]);
                 const searchQuery = ref(""); 
                 const currentPage = ref(1); 
-                const pageSize = 10; 
+                const pageSize = 5; 
                 const showRecent = ref(false); 
 
                 // 核心計算
                 const calculateTransaction = (log, playerName) => {
+                    // ★★★ 新增判斷：如果這筆紀錄有存名單，且我不名單內，就與我無關 ★★★
+                    if (log.players && Array.isArray(log.players)) {
+                        if (!log.players.includes(playerName)) {
+                            return 0; // 我沒打這把，不用付錢
+                        }
+                    }
                     const base = log.base || 30;
                     const point = log.point || 10;
                     const logDealer = log.dealer; 
@@ -297,5 +303,4 @@
         }).mount('#app');
     </script>
 </body>
-
 </html>
