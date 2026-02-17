@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>麻將雲端計分板 (修正版)</title>
+    <title>麻將雲端計分板</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -244,6 +244,9 @@
 
                 // --- 核心計算 ---
                 const calculateTransaction = (log, playerName) => {
+                    if (log.players && Array.isArray(log.players)) {
+                        if (!log.players.includes(playerName)) return 0;
+                    }
                     const base = log.base || settings.value.base;
                     const point = log.point || settings.value.point;
                     const logDealer = log.dealer; 
@@ -378,7 +381,9 @@
                         dealer: currentDealerName, 
                         dealerCount: dealerCount.value, 
                         base: settings.value.base,
-                        point: settings.value.point 
+                        point: settings.value.point,
+                        // ★★★ 新增這一行：把目前座位上的四個人名單存進去 ★★★
+                        players: [...currentSeats.value]
                     };
 
                     insertLog(newLog);
