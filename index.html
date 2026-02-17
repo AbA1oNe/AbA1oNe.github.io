@@ -3,25 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>麻將計分板 (連莊自動版)</title>
+    <title>麻將雲端計分板 (修正版)</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #1a202c; color: white; }
         .dealer-badge { transition: all 0.3s ease; }
-        /* 隱藏 number input 的箭頭 */
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        /* 載入中的遮罩 */
+        .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999; display: flex; justify-content: center; align-items: center; color: white; font-size: 1.5rem; flex-direction: column; gap: 10px; }
     </style>
 </head>
 <body>
     <div id="app" class="max-w-2xl mx-auto p-4 pb-24">
         
+        <div v-if="isLoading" class="loading-overlay">
+            <div>資料同步中...</div>
+            <div class="text-sm text-gray-400">請稍候</div>
+        </div>
+
         <header class="flex justify-between items-center mb-4 border-b border-gray-600 pb-4">
-            <h1 class="text-xl font-bold text-green-400">🀄 麻將計分助手</h1>
+            <h1 class="text-xl font-bold text-green-400">🀄 麻將雲端計分</h1>
+            <a href="history.html" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-sm">查看歷史紀錄</a>
             <div class="text-sm text-gray-400 flex items-center gap-2">
-                底 <input v-model.number="settings.base" type="number" class="w-12 bg-gray-700 text-center rounded p-1"> 
-                台 <input v-model.number="settings.point" type="number" class="w-12 bg-gray-700 text-center rounded p-1">
+                底 <input v-model.number="settings.base" type="number" @change="saveLocalSettings" class="w-12 bg-gray-700 text-center rounded p-1"> 
+                台 <input v-model.number="settings.point" type="number" @change="saveLocalSettings" class="w-12 bg-gray-700 text-center rounded p-1">
             </div>
         </header>
 
@@ -37,16 +45,15 @@
                                 :class="dealerIndex === index ? 'bg-orange-600 text-white border-orange-400 shadow-[0_0_8px_rgba(234,88,12,0.5)]' : 'bg-gray-700 text-gray-500 border-gray-600 hover:bg-gray-600'">
                             {{ dealerIndex === index ? '莊' : '做莊' }}
                         </button>
-                        
                         <div v-if="dealerIndex === index" class="flex items-center bg-orange-900 rounded border border-orange-700 px-1">
                             <span class="text-[10px] text-orange-300 mr-1">連</span>
-                            <input v-model.number="dealerCount" type="number" class="w-6 bg-transparent text-center text-xs font-bold text-white focus:outline-none">
+                            <input v-model.number="dealerCount" @change="saveLocalSettings" type="number" class="w-6 bg-transparent text-center text-xs font-bold text-white focus:outline-none">
                         </div>
                     </div>
                     <div class="text-xs font-bold text-gray-500">{{ directions[index] }}</div>
                 </div>
 
-                <input v-model="currentSeats[index]" placeholder="輸入名字" 
+                <input v-model="currentSeats[index]" @change="saveLocalSettings" placeholder="輸入名字" 
                        class="w-full bg-transparent text-lg font-bold text-center focus:outline-none mb-1 placeholder-gray-600 border-b border-transparent focus:border-gray-500">
                 
                 <div class="text-center text-3xl font-mono font-bold my-1" 
@@ -55,17 +62,13 @@
                 </div>
 
                 <div class="flex justify-center gap-2 text-xs text-gray-400 mb-2 bg-black bg-opacity-20 py-1 rounded">
-                    <span>胡: <b class="text-white">{{ getPlayerStats(playerName).win }}</b></span>
-                    <span>|</span>
-                    <span>自: <b class="text-yellow-400">{{ getPlayerStats(playerName).self }}</b></span>
-                    <span>|</span>
-                    <span>放: <b class="text-red-400">{{ getPlayerStats(playerName).lose }}</b></span>
+                    <span>胡牌: <b class="text-white">{{ getPlayerStats(playerName).win }}</b></span> |
+                    <span>自摸: <b class="text-yellow-400">{{ getPlayerStats(playerName).self }}</b></span> |
+                    <span>放槍: <b class="text-red-400">{{ getPlayerStats(playerName).lose }}</b></span>
                 </div>
 
                 <div class="grid grid-cols-1 mt-auto">
-                    <button @click="openWinModal(index)" class="bg-red-600 hover:bg-red-700 text-white py-2 rounded font-bold shadow text-sm">
-                        胡牌
-                    </button>
+                    <button @click="openWinModal(index)" class="bg-red-600 hover:bg-red-700 text-white py-2 rounded font-bold shadow text-sm">胡牌</button>
                 </div>
             </div>
         </section>
@@ -74,99 +77,59 @@
             <button @click="shuffleSeats" class="bg-purple-600 text-white px-4 py-2 rounded shadow shrink-0 text-sm">🎲 抓位</button>
             <button @click="addDrawRecord" class="bg-gray-600 text-white px-4 py-2 rounded shadow shrink-0 text-sm">💨 臭莊(連莊)</button>
             <button @click="manualResetDealer" class="bg-orange-800 text-orange-100 px-4 py-2 rounded shadow shrink-0 text-sm">🔄 強制下莊</button>
-            <button @click="resetData" class="bg-red-900 text-red-200 px-4 py-2 rounded shadow shrink-0 ml-auto text-xs">重置</button>
+            <button @click="resetDB" class="bg-red-900 text-red-200 px-4 py-2 rounded shadow shrink-0 ml-auto text-xs">清空資料庫</button>
         </section>
 
         <div v-if="matchState.isOpen" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
             <div class="bg-gray-800 p-5 rounded-lg max-w-sm w-full border border-gray-600 shadow-2xl">
-                
                 <h3 class="text-xl font-bold mb-4 text-center border-b border-gray-700 pb-2">
                     <span class="text-green-400">{{ currentSeats[matchState.winner] }}</span> 胡牌
-                    <div v-if="matchState.winner === dealerIndex" class="text-xs text-orange-400 mt-1">莊家連 {{ dealerCount }} (加 {{ 1 + dealerCount }} 台)</div>
+                    <div v-if="matchState.winner === dealerIndex" class="text-xs text-orange-400 mt-1">莊家連 {{ dealerCount }} (加 {{ 1 + dealerCount}} 台)</div>
                 </h3>
                 
                 <div class="flex gap-2 mb-4">
-                    <button @click="matchState.mode = 'self'" 
-                            class="flex-1 py-3 rounded font-bold transition-colors border-2"
-                            :class="matchState.mode === 'self' ? 'bg-yellow-600 border-yellow-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-400'">
-                        自摸
-                    </button>
-                    <button @click="matchState.mode = 'discard'" 
-                            class="flex-1 py-3 rounded font-bold transition-colors border-2"
-                            :class="matchState.mode === 'discard' ? 'bg-blue-600 border-blue-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-400'">
-                        抓人
-                    </button>
+                    <button @click="matchState.mode = 'self'" class="flex-1 py-3 rounded font-bold border-2" :class="matchState.mode === 'self' ? 'bg-yellow-600 border-yellow-400' : 'bg-gray-700 border-gray-600'">自摸</button>
+                    <button @click="matchState.mode = 'discard'" class="flex-1 py-3 rounded font-bold border-2" :class="matchState.mode === 'discard' ? 'bg-blue-600 border-blue-400' : 'bg-gray-700 border-gray-600'">抓人</button>
                 </div>
 
                 <div v-if="matchState.mode === 'discard'" class="mb-4 bg-gray-900 p-3 rounded">
                     <label class="block text-sm text-gray-400 mb-2">誰放槍？</label>
                     <div class="grid grid-cols-3 gap-2">
                         <template v-for="(player, idx) in currentSeats" :key="idx">
-                            <button v-if="idx !== matchState.winner"
-                                    @click="matchState.loser = idx"
-                                    class="py-2 px-1 rounded text-sm truncate transition-colors border relative"
-                                    :class="matchState.loser === idx ? 'bg-red-600 border-red-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-300'">
+                            <button v-if="idx !== matchState.winner" @click="matchState.loser = idx" class="py-2 px-1 rounded text-sm border relative" :class="matchState.loser === idx ? 'bg-red-600 border-red-400' : 'bg-gray-700 border-gray-600'">
                                 {{ player }}
-                                <span v-if="idx === dealerIndex" class="absolute top-0 right-0 w-2 h-2 bg-orange-500 rounded-full"></span>
                             </button>
                         </template>
                     </div>
                 </div>
 
                 <div class="mb-6 bg-gray-900 p-3 rounded">
-                    <label class="block text-sm text-gray-400 mb-2 text-center">台數 (僅輸入牌型台)</label>
                     <div class="flex items-center justify-center gap-4">
-                        <button @click="matchState.tai > 0 ? matchState.tai-- : 0" class="bg-gray-700 w-12 h-12 rounded-full text-xl shadow">-</button>
+                        <button @click="matchState.tai > 0 ? matchState.tai-- : 0" class="bg-gray-700 w-12 h-12 rounded-full text-xl">-</button>
                         <span class="text-4xl font-mono font-bold w-16 text-center text-white">{{ matchState.tai }}</span>
-                        <button @click="matchState.tai++" class="bg-gray-700 w-12 h-12 rounded-full text-xl shadow">+</button>
+                        <button @click="matchState.tai++" class="bg-gray-700 w-12 h-12 rounded-full text-xl">+</button>
                     </div>
-                    
-                    <div class="mt-4 text-center border-t border-gray-700 pt-2 space-y-1">
-                        <div class="text-xs text-gray-500">預計總收入</div>
-                        <div class="text-3xl text-green-400 font-bold font-mono">+{{ previewAmount.total }}</div>
-                        
-                        <div class="text-xs text-gray-400 mt-2">
-                            <div v-if="matchState.mode === 'self' && matchState.winner === dealerIndex">
-                                <span class="text-orange-400">莊家連{{ dealerCount }}通殺</span>
-                                <div class="text-[10px] text-gray-500">每家付: {{ previewAmount.detail[0] }}</div>
-                            </div>
-                            <div v-else-if="matchState.mode === 'self'">
-                                莊家付: <span class="text-red-300">{{ previewAmount.dealerPays }}</span> 
-                                (含連莊{{ 1 + dealerCount }}台)
-                                <br>
-                                閒家付: <span class="text-gray-300">{{ previewAmount.playerPays }}</span>
-                            </div>
-                            <div v-else>
-                                <div v-if="previewAmount.isDealerInvolved" class="text-orange-400">
-                                    含莊家連{{ dealerCount }} (加 {{ 1 + dealerCount }} 台)
-                                </div>
-                                放槍者付: <span class="text-red-400">{{ previewAmount.total }}</span>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="mt-4 text-center border-t border-gray-700 pt-2 text-3xl text-green-400 font-bold font-mono">+{{ previewAmount.total }}</div>
                 </div>
 
                 <div class="flex gap-3">
-                    <button @click="matchState.isOpen = false" class="flex-1 bg-gray-600 py-3 rounded text-gray-200">取消</button>
-                    <button @click="confirmRound" class="flex-1 bg-green-600 py-3 rounded font-bold text-white shadow-lg">確認記帳</button>
+                    <button @click="matchState.isOpen = false" class="flex-1 bg-gray-600 py-3 rounded">取消</button>
+                    <button @click="confirmRound" class="flex-1 bg-green-600 py-3 rounded font-bold shadow-lg">確認記帳</button>
                 </div>
             </div>
         </div>
 
         <section>
-            <h3 class="text-lg font-bold mb-3 flex items-center text-gray-300">
-                對戰紀錄
-            </h3>
+            <h3 class="text-lg font-bold mb-3 flex items-center text-gray-300">對戰紀錄</h3>
             <div class="space-y-2">
                 <div v-for="(log, index) in reversedLogs" :key="log.id" class="bg-gray-800 p-3 rounded flex justify-between items-center text-sm border-l-4 border-gray-700">
                     <div class="flex flex-col">
                         <span class="text-gray-500 text-xs flex items-center gap-1">
                             {{ new Date(log.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) }}
                             <span v-if="log.dealer" class="text-orange-400 bg-orange-900 bg-opacity-30 px-1 rounded text-[10px]">
-                                莊:{{ log.dealer }} (連{{ log.dealerCount }})
+                                莊:{{ log.dealer }} (連{{ log.dealer_count }})
                             </span>
                         </span>
-                        
                         <div v-if="log.type === 'draw'" class="text-gray-400 font-bold mt-1">💨 臭莊流局</div>
                         <div v-else class="mt-1">
                             <span class="text-green-400 font-bold text-base">{{ log.winner }}</span>
@@ -175,86 +138,136 @@
                             <span class="text-gray-500 ml-1 text-xs">({{ log.tai }}台)</span>
                         </div>
                     </div>
-
                     <div class="flex items-center gap-3">
-                        <div class="font-mono font-bold text-lg text-yellow-500">
-                            {{ log.type === 'draw' ? '--' : '+' + log.amount }}
-                        </div>
+                        <div class="font-mono font-bold text-lg text-yellow-500">{{ log.type === 'draw' ? '--' : '+' + log.amount }}</div>
                         <button @click="deleteLog(log.id)" class="text-gray-600 hover:text-red-500 px-2">✕</button>
                     </div>
                 </div>
             </div>
         </section>
-
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted, watch } = Vue;
+        const { createApp, ref, computed, onMounted } = Vue;
 
+        // ★★★ 請務必在這裡填入你的 Supabase 資訊 (只宣告這一次) ★★★
+        const SUPABASE_URL = 'https://hyhmwlbsdvlssfmdsmux.supabase.co'; // 結尾不要有斜線
+        const SUPABASE_KEY = 'sb_publishable_OZRd4Lcc7gK6aLMmbpxBng_YpSmnfnR'; 
+        console.log('1')
+        // 這裡建立一次連線，全域使用
+        const supabase_con = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        console.log('1')
         createApp({
             setup() {
-                // 資料與設定
+                const isLoading = ref(false);
                 const settings = ref({ base: 30, point: 10 });
                 const directions = ['東', '南', '西', '北'];
                 const currentSeats = ref(['玩家A', '玩家B', '玩家C', '玩家D']);
                 const dealerIndex = ref(0); 
-                const dealerCount = ref(0); // 連莊數
+                const dealerCount = ref(0);
                 const logs = ref([]);
                 
-                const matchState = ref({
-                    isOpen: false,
-                    winner: null, 
-                    loser: null,
-                    mode: 'self',
-                    tai: 1
-                });
+                const matchState = ref({ isOpen: false, winner: null, loser: null, mode: 'self', tai: 1 });
 
-                // --- 核心計算邏輯 ---
+                // 資料庫讀取 (Read)
+                // 修改 index.html 中的 fetchLogs
+                const fetchLogs = async () => {
+                    isLoading.value = true;
+                    
+                    // 取得今天凌晨 00:00 的時間戳記
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const todayTimestamp = today.getTime();
 
-                // 計算單次交易中，某個玩家應該付多少錢
+                    // 只抓取時間 > 今天凌晨的資料
+                    const { data, error } = await supabase_con
+                        .from('logs')
+                        .select('*')
+                        .gte('time', todayTimestamp) // gte = greater than or equal (大於等於)
+                        .order('time', { ascending: true });
+                    
+                    if (error) {
+                        console.error('讀取失敗:', error);
+                        alert('讀取失敗: ' + error.message);
+                    } else {
+                        logs.value = data || [];
+                    }
+                    isLoading.value = false;
+                };
+
+                // 資料庫寫入 (Create)
+                const insertLog = async (newLog) => {
+                    isLoading.value = true;
+                    const dbLog = {
+                        ...newLog,
+                        dealer_count: newLog.dealerCount // mapping
+                    };
+                    delete dbLog.dealerCount; 
+
+                    const { error } = await supabase_con.from('logs').insert([dbLog]);
+                    if (error) {
+                        console.error('寫入失敗:', error);
+                        alert('寫入失敗: ' + error.message);
+                    } else {
+                        await fetchLogs(); // 寫入成功後重新抓取
+                    }
+                    isLoading.value = false;
+                };
+
+                // 資料庫刪除 (Delete)
+                const deleteLog = async (id) => {
+                    if(!confirm("確定從資料庫永久刪除此紀錄？")) return;
+                    isLoading.value = true;
+                    const { error } = await supabase_con.from('logs').delete().eq('id', id);
+                    if (error) {
+                        alert('刪除失敗: ' + error.message);
+                    } else {
+                        await fetchLogs();
+                    }
+                    isLoading.value = false;
+                };
+                
+                // 清空資料庫
+                const resetDB = async () => {
+                    if(!confirm("警告：這將清空【雲端資料庫】所有紀錄！無法復原！")) return;
+                    isLoading.value = true;
+                    const { error } = await supabase_con.from('logs').delete().gt('id', 0);
+                    if (error) alert(error.message);
+                    else {
+                        logs.value = [];
+                        dealerIndex.value = 0;
+                        dealerCount.value = 0;
+                        saveLocalSettings();
+                    }
+                    isLoading.value = false;
+                };
+
+                // --- 核心計算 ---
                 const calculateTransaction = (log, playerName) => {
                     const base = log.base || settings.value.base;
                     const point = log.point || settings.value.point;
                     const logDealer = log.dealer; 
-                    const logDealerCount = log.dealerCount || 0;
+                    const logDealerCount = log.dealer_count || 0; 
 
-                    // ★ 計算應付金額核心公式
-                    // isDealerInvolved: 這次支付關係中是否有莊家參與
                     const getPay = (tai, isDealerInvolved) => {
                         let effectiveTai = tai;
-                        if (isDealerInvolved) {
-                            // 莊家台(1) + 連莊拉莊n
-                            effectiveTai += 1 + logDealerCount;
-                        }
+                        if (isDealerInvolved) effectiveTai += 1 + (logDealerCount);
                         return base + (effectiveTai * point);
                     }
 
                     if (log.type === 'draw') return 0;
-
-                    // 我是贏家 -> 收錢 (直接讀取紀錄的總額)
                     if (log.winner === playerName) return log.amount; 
 
-                    // 我不是贏家，檢查我是否要付錢
                     if (log.type === 'self') {
                         const winnerIsDealer = (log.winner === logDealer);
                         const amIDealer = (playerName === logDealer);
-
-                        if (winnerIsDealer) {
-                            // 莊家自摸：每家都付 (台 + 1 + 2n)
-                            return -getPay(log.tai, true);
-                        } else {
-                            // 閒家自摸
-                            if (amIDealer) {
-                                // 我是莊家，我付 (台 + 1 + 2n)
-                                return -getPay(log.tai, true);
-                            } else {
-                                // 我是閒家，我付 (台)
-                                return -getPay(log.tai, false);
-                            }
+                        if (winnerIsDealer) return -getPay(log.tai, true);
+                        else {
+                            if (amIDealer) return -getPay(log.tai, true);
+                            else return -getPay(log.tai, false);
                         }
                     } else if (log.type === 'discard') {
                         if (log.loser === playerName) {
-                            // 判斷是否有莊家參與 (贏家是莊 OR 輸家是莊)
                             const isDealerInvolved = (log.winner === logDealer || log.loser === logDealer);
                             return -getPay(log.tai, isDealerInvolved);
                         }
@@ -265,9 +278,7 @@
                 const getPlayerScore = (name) => {
                     if (!name) return 0;
                     let total = 0;
-                    logs.value.forEach(log => {
-                        total += calculateTransaction(log, name);
-                    });
+                    logs.value.forEach(log => total += calculateTransaction(log, name));
                     return Math.round(total);
                 };
 
@@ -280,41 +291,31 @@
                             stats.win++;
                             if (log.type === 'self') stats.self++;
                         }
-                        if (log.type === 'discard' && log.loser === name) {
-                            stats.lose++;
-                        }
+                        if (log.type === 'discard' && log.loser === name) stats.lose++;
                     });
                     return stats;
                 };
 
-                // 預覽金額 (給 Modal 顯示用)
                 const previewAmount = computed(() => {
                     const base = settings.value.base;
                     const point = settings.value.point;
                     const tai = matchState.value.tai;
                     const winnerIdx = matchState.value.winner;
                     const loserIdx = matchState.value.loser;
-                    
                     const winnerIsDealer = (winnerIdx === dealerIndex.value);
                     const loserIsDealer = (loserIdx === dealerIndex.value);
                     
-                    // 單價計算
                     const payNormal = base + (tai * point);     
-                    // 莊家參與價：台 + 1 + 2n
                     const dealerExtraTai = 1 + (dealerCount.value);
                     const payDealer = base + ((tai + dealerExtraTai) * point);
 
                     if (matchState.value.mode === 'self') {
-                        if (winnerIsDealer) {
-                            // 莊家自摸：三家都付 Dealer Price
-                            return { total: payDealer * 3, detail: [payDealer], isDealerInvolved: true };
-                        } else {
-                            // 閒家自摸：莊家付 Dealer Price，另外兩家付 Normal
+                        if (winnerIsDealer) return { total: payDealer * 3, detail: [payDealer], isDealerInvolved: true };
+                        else {
                             const total = payDealer + (payNormal * 2);
                             return { total, dealerPays: payDealer, playerPays: payNormal, isDealerInvolved: true };
                         }
                     } else {
-                        // 放槍
                         if (loserIdx === null) return { total: 0 };
                         const isDealerInvolved = winnerIsDealer || loserIsDealer;
                         const total = isDealerInvolved ? payDealer : payNormal;
@@ -322,39 +323,51 @@
                     }
                 });
 
+                const reversedLogs = computed(() => [...logs.value].reverse());
+
+                // --- 狀態保存 ---
+                const saveLocalSettings = () => {
+                    localStorage.setItem('mj_seats', JSON.stringify(currentSeats.value));
+                    localStorage.setItem('mj_settings', JSON.stringify(settings.value));
+                    localStorage.setItem('mj_dealer', dealerIndex.value);
+                    localStorage.setItem('mj_dealerCount', dealerCount.value);
+                };
+
+                const loadLocalSettings = () => {
+                    const s = localStorage.getItem('mj_seats');
+                    const st = localStorage.getItem('mj_settings');
+                    const d = localStorage.getItem('mj_dealer');
+                    const dc = localStorage.getItem('mj_dealerCount');
+                    if (s) currentSeats.value = JSON.parse(s);
+                    if (st) settings.value = JSON.parse(st);
+                    if (d) dealerIndex.value = parseInt(d);
+                    if (dc) dealerCount.value = parseInt(dc);
+                };
+
                 // --- 操作 ---
                 const setDealer = (index) => {
-                    // 如果點擊已經是莊家的人，不動作（避免誤觸重置）
                     if (dealerIndex.value !== index) {
-                        if(confirm(`確定換 ${currentSeats.value[index]} 做莊？連莊數將歸零。`)){
+                        if(confirm(`換 ${currentSeats.value[index]} 做莊？連莊數歸零。`)){
                             dealerIndex.value = index;
                             dealerCount.value = 0;
-                            saveData(); 
+                            saveLocalSettings();
                         }
                     }
                 };
 
                 const openWinModal = (index) => {
-                    matchState.value = {
-                        isOpen: true,
-                        winner: index,
-                        loser: null,
-                        mode: 'self',
-                        tai: 1
-                    };
+                    matchState.value = { isOpen: true, winner: index, loser: null, mode: 'self', tai: 1 };
                 };
 
                 const confirmRound = () => {
                     const { winner, loser, mode, tai } = matchState.value;
-                    
                     if (mode === 'discard' && loser === null) return alert("請選擇放槍者");
                     if (mode === 'discard' && winner === loser) return alert("贏家輸家不能同一人");
 
                     const currentDealerName = currentSeats.value[dealerIndex.value];
                     const amount = previewAmount.value.total;
 
-                    // 記錄
-                    logs.value.push({
+                    const newLog = {
                         id: Date.now(),
                         time: Date.now(),
                         winner: currentSeats.value[winner],
@@ -363,41 +376,32 @@
                         tai: tai,
                         amount: amount,
                         dealer: currentDealerName, 
-                        dealerCount: dealerCount.value, // 存當下連莊數
+                        dealerCount: dealerCount.value, 
                         base: settings.value.base,
                         point: settings.value.point 
-                    });
+                    };
 
-                    // ★ 自動化莊家邏輯
+                    insertLog(newLog);
+
                     const winnerIsDealer = (winner === dealerIndex.value);
-                    const loserIsDealer = (loser === dealerIndex.value);
-
-                    if (winnerIsDealer) {
-                        // 莊家贏 -> 連莊 + 1
-                        dealerCount.value++;
-                    } else {
-                        // 閒家贏 -> 莊家下莊
-                        // 規則判斷：若是閒家胡閒家，莊家是否下莊？
-                        // 台灣規則通常是：只要莊家沒胡牌（且沒流局），就下莊。
-                        // 所以閒家互打，莊家也要下莊。
-                        moveToNextDealer();
-                    }
+                    if (winnerIsDealer) dealerCount.value++;
+                    else moveToNextDealer();
                     
                     matchState.value.isOpen = false;
-                    saveData();
+                    saveLocalSettings();
                 };
 
                 const addDrawRecord = () => {
-                    logs.value.push({
+                    const newLog = {
                         id: Date.now(),
                         time: Date.now(),
                         type: 'draw',
                         dealer: currentSeats.value[dealerIndex.value],
                         dealerCount: dealerCount.value
-                    });
-                    // 臭莊 -> 連莊 + 1
+                    };
+                    insertLog(newLog);
                     dealerCount.value++;
-                    saveData();
+                    saveLocalSettings();
                 };
 
                 const moveToNextDealer = () => {
@@ -407,7 +411,7 @@
 
                 const manualResetDealer = () => {
                     if(confirm("強制換下家做莊？")) moveToNextDealer();
-                    saveData();
+                    saveLocalSettings();
                 };
 
                 const shuffleSeats = () => {
@@ -420,56 +424,20 @@
                     currentSeats.value = array;
                     dealerIndex.value = 0; 
                     dealerCount.value = 0;
-                    saveData();
+                    saveLocalSettings();
                 };
 
-                const deleteLog = (id) => {
-                    if(!confirm("刪除此紀錄？(注意：不會復原連莊數)")) return;
-                    logs.value = logs.value.filter(l => l.id !== id);
-                    saveData();
-                };
-
-                const resetData = () => {
-                    if(confirm("清空所有資料？")) {
-                        logs.value = [];
-                        dealerIndex.value = 0;
-                        dealerCount.value = 0;
-                        saveData();
-                    }
-                };
-
-                const reversedLogs = computed(() => [...logs.value].reverse());
-
-                const saveData = () => {
-                    localStorage.setItem('mj_seats', JSON.stringify(currentSeats.value));
-                    localStorage.setItem('mj_logs', JSON.stringify(logs.value));
-                    localStorage.setItem('mj_settings', JSON.stringify(settings.value));
-                    localStorage.setItem('mj_dealer', dealerIndex.value);
-                    localStorage.setItem('mj_dealerCount', dealerCount.value);
-                };
-
-                const loadData = () => {
-                    const s = localStorage.getItem('mj_seats');
-                    const l = localStorage.getItem('mj_logs');
-                    const st = localStorage.getItem('mj_settings');
-                    const d = localStorage.getItem('mj_dealer');
-                    const dc = localStorage.getItem('mj_dealerCount');
-                    
-                    if (s) currentSeats.value = JSON.parse(s);
-                    if (l) logs.value = JSON.parse(l);
-                    if (st) settings.value = JSON.parse(st);
-                    if (d) dealerIndex.value = parseInt(d);
-                    if (dc) dealerCount.value = parseInt(dc);
-                };
-
-                onMounted(loadData);
+                onMounted(() => {
+                    loadLocalSettings(); 
+                    fetchLogs(); 
+                });
 
                 return {
                     settings, directions, currentSeats, dealerIndex, dealerCount, logs, reversedLogs,
-                    matchState, previewAmount,
+                    matchState, previewAmount, isLoading,
                     getPlayerScore, getPlayerStats,
                     setDealer, openWinModal, confirmRound,
-                    shuffleSeats, addDrawRecord, deleteLog, resetData, manualResetDealer
+                    shuffleSeats, addDrawRecord, deleteLog, resetDB, manualResetDealer, saveLocalSettings
                 };
             }
         }).mount('#app');
