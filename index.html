@@ -1,446 +1,478 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>麻將計算機</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>麻將計分板 (連莊自動版)</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            position: relative;
-            flex-direction: column;
-            background-color: #f0f0f0; /* 背景顏色 */
-        }
-
-        .top-text, .bottom-text, .left-text, .right-text {
-            position: absolute;
-            text-align: center;
-        }
-
-        #user1 {
-            position: absolute;
-            top: 20%;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-        #user1-add-choice {
-            position: absolute;
-            top: 13%;
-            left: 25%;
-            transform: translateX(-50%);
-        }
-
-        #user3 {
-            position: absolute;
-            bottom: 20%;
-            left: 48%;
-            transform: translateX(- 50%);
-        }
-
-        #user3-add-choice {
-            position: absolute;
-            top: 27%;
-            left: 25%;
-            transform: translateX(-50%);
-        }
-
-        #user2 {
-            position: absolute;
-            top: 50%;
-            left: 30%;
-            transform: translateY(-50%);
-        }
-
-        #user2-add-choice {
-            position: absolute;
-            top: 21%;
-            left: 23%;
-            transform: translateY(-50%);
-        }
-
-        #user4 {
-            position: absolute;
-            top: 50%;
-            right: 30%;
-            transform: translateY(-50%);
-        }
-
-        #user4-add-choice {
-            position: absolute;
-            top: 35%;
-            left: 23%;
-            transform: translateY(-50%);
-        }
-
-        #game-board {
-            position: relative;
-            width: 90%;
-            max-width: 600px;
-            height: 90%;
-            max-height: 600px;
-            border: 2px solid #333;
-            padding: 10px;
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            grid-template-rows: repeat(6, 1fr);
-            gap: 10px;
-            background-color: #fff; /* 框框背景顏色 */
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* 框框陰影效果 */
-        }
-
-        .user1-add { grid-row: 1; grid-column: 3; height: 70px; width: 120px;}
-        .user3-add { grid-row: 6; grid-column: 3; height: 70px; width: 120px;}
-        .user2-add { grid-row: 3; grid-column: 1; height: 70px; width: 120px;}
-        .user4-add { grid-row: 3; grid-column: 6; height: 70px; width: 120px;}
-        .user1-submit { grid-row: 1; grid-column: 4; height: 70px; width: 120px;}
-        .user3-submit { grid-row: 6; grid-column: 4; height: 70px; width: 120px;}
-        .user2-submit { grid-row: 4; grid-column: 1; height: 70px; width: 120px;}
-        .user4-submit { grid-row: 4; grid-column: 6; height: 70px; width: 120px;}
-
-
-        button {
-            font-size: 16px;
-            padding: 10px 15px;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-
-        #reset {
-            font-size: 16px;
-            padding: 10px 15px;
-            cursor: pointer;
-            background-color: #d76311;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
-        #input-container {
-            position: absolute;
-            top: 40px;
-            left: 40px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        #input-container input {
-            margin-bottom: 10px;
-            position: static;
-            margin-top: 20px;
-        }
-
-        #input-container input, #reset {
-            width: 90%; /* Make input fields and button fill the container */
-        }
-
-        .visually-hidden { 
-        border: 0;
-        padding: 0;
-        margin: 0;
-        position: absolute !important;
-        height: 1px; 
-        width: 1px;
-        overflow: hidden;
-        clip: rect(1px 1px 1px 1px); /* IE6, IE7 - a 0 height clip, off to the bottom right of the visible 1px box */
-        clip: rect(1px, 1px, 1px, 1px); /*maybe deprecated but we need to support legacy browsers */
-        clip-path: inset(50%); /*modern browsers, clip-path works inwards from each corner*/
-        white-space: nowrap; /* added line to stop words getting smushed together (as they go onto seperate lines and some screen readers do not understand line feeds as a space */
-        }
-
-        
+        body { font-family: "Microsoft JhengHei", sans-serif; background-color: #1a202c; color: white; }
+        .dealer-badge { transition: all 0.3s ease; }
+        /* 隱藏 number input 的箭頭 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body>
-    <div id="input-container">
-        <button id="reset" onclick="reset()" type="reset">重置</button>
-        <br>
-        <button id="reset" onclick="shufflePos()" type="button">抓位</button>
-        <br>
-        <input tpye="number" id="extra">一台：</input>
-    </div>
-    
-    <div id="game-board">
-        <label for="select1" class="user1-add">
-        <select id="user1-add" name="user1-add">
-            <option value="" selected>選擇胡牌點數</option>
-        </select>
-        </label>
-        <label for="select1" class="user2-add">
-        <select id="user2-add" name="user2-add">
-            <option value="" selected>選擇胡牌點數</option>
-        </select>
-        </label>
-        <label for="select1" class="user3-add">
-        <select id="user3-add" name="user3-add">
-            <option value="" selected>選擇胡牌點數</option>
-        </select>
-        </label>
-        <label for="select1" class="user4-add">
-        <select id="user4-add" name="user4-add">
-            <option value="" selected>選擇胡牌點數</option>
-        </select>
-        </label>
-        <button class="user1-submit" onclick="addScore(1, parseInt(document.getElementById('user1-add').value), parseInt(document.getElementById('user1-add-choice').value))" type="submit">submit</button>
-        <button class="user2-submit" onclick="addScore(2, parseInt(document.getElementById('user2-add').value), parseInt(document.getElementById('user2-add-choice').value))" type="submit">submit</button>
-        <button class="user3-submit" onclick="addScore(3, parseInt(document.getElementById('user3-add').value), parseInt(document.getElementById('user3-add-choice').value))" type="submit">submit</button>
-        <button class="user4-submit" onclick="addScore(4, parseInt(document.getElementById('user4-add').value), parseInt(document.getElementById('user4-add-choice').value))" type="submit">submit</button>
+    <div id="app" class="max-w-2xl mx-auto p-4 pb-24">
         
+        <header class="flex justify-between items-center mb-4 border-b border-gray-600 pb-4">
+            <h1 class="text-xl font-bold text-green-400">🀄 麻將計分助手</h1>
+            <div class="text-sm text-gray-400 flex items-center gap-2">
+                底 <input v-model.number="settings.base" type="number" class="w-12 bg-gray-700 text-center rounded p-1"> 
+                台 <input v-model.number="settings.point" type="number" class="w-12 bg-gray-700 text-center rounded p-1">
+            </div>
+        </header>
+
+        <section class="grid grid-cols-2 gap-3 mb-6">
+            <div v-for="(playerName, index) in currentSeats" :key="index" 
+                 class="relative p-3 rounded-lg border-2 flex flex-col justify-between transition-colors"
+                 :class="activeWinner === index ? 'border-red-500 bg-gray-700' : (dealerIndex === index ? 'border-orange-500 bg-gray-800' : 'border-gray-600 bg-gray-800')">
+                
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center gap-1">
+                        <button @click="setDealer(index)" 
+                                class="text-xs font-bold px-2 py-1 rounded border dealer-badge"
+                                :class="dealerIndex === index ? 'bg-orange-600 text-white border-orange-400 shadow-[0_0_8px_rgba(234,88,12,0.5)]' : 'bg-gray-700 text-gray-500 border-gray-600 hover:bg-gray-600'">
+                            {{ dealerIndex === index ? '莊' : '做莊' }}
+                        </button>
+                        
+                        <div v-if="dealerIndex === index" class="flex items-center bg-orange-900 rounded border border-orange-700 px-1">
+                            <span class="text-[10px] text-orange-300 mr-1">連</span>
+                            <input v-model.number="dealerCount" type="number" class="w-6 bg-transparent text-center text-xs font-bold text-white focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="text-xs font-bold text-gray-500">{{ directions[index] }}</div>
+                </div>
+
+                <input v-model="currentSeats[index]" placeholder="輸入名字" 
+                       class="w-full bg-transparent text-lg font-bold text-center focus:outline-none mb-1 placeholder-gray-600 border-b border-transparent focus:border-gray-500">
+                
+                <div class="text-center text-3xl font-mono font-bold my-1" 
+                     :class="getPlayerScore(playerName) >= 0 ? 'text-green-400' : 'text-red-400'">
+                    {{ getPlayerScore(playerName) }}
+                </div>
+
+                <div class="flex justify-center gap-2 text-xs text-gray-400 mb-2 bg-black bg-opacity-20 py-1 rounded">
+                    <span>胡: <b class="text-white">{{ getPlayerStats(playerName).win }}</b></span>
+                    <span>|</span>
+                    <span>自: <b class="text-yellow-400">{{ getPlayerStats(playerName).self }}</b></span>
+                    <span>|</span>
+                    <span>放: <b class="text-red-400">{{ getPlayerStats(playerName).lose }}</b></span>
+                </div>
+
+                <div class="grid grid-cols-1 mt-auto">
+                    <button @click="openWinModal(index)" class="bg-red-600 hover:bg-red-700 text-white py-2 rounded font-bold shadow text-sm">
+                        胡牌
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="flex gap-2 mb-6 overflow-x-auto pb-2">
+            <button @click="shuffleSeats" class="bg-purple-600 text-white px-4 py-2 rounded shadow shrink-0 text-sm">🎲 抓位</button>
+            <button @click="addDrawRecord" class="bg-gray-600 text-white px-4 py-2 rounded shadow shrink-0 text-sm">💨 臭莊(連莊)</button>
+            <button @click="manualResetDealer" class="bg-orange-800 text-orange-100 px-4 py-2 rounded shadow shrink-0 text-sm">🔄 強制下莊</button>
+            <button @click="resetData" class="bg-red-900 text-red-200 px-4 py-2 rounded shadow shrink-0 ml-auto text-xs">重置</button>
+        </section>
+
+        <div v-if="matchState.isOpen" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+            <div class="bg-gray-800 p-5 rounded-lg max-w-sm w-full border border-gray-600 shadow-2xl">
+                
+                <h3 class="text-xl font-bold mb-4 text-center border-b border-gray-700 pb-2">
+                    <span class="text-green-400">{{ currentSeats[matchState.winner] }}</span> 胡牌
+                    <div v-if="matchState.winner === dealerIndex" class="text-xs text-orange-400 mt-1">莊家連 {{ dealerCount }} (加 {{ 1 + dealerCount }} 台)</div>
+                </h3>
+                
+                <div class="flex gap-2 mb-4">
+                    <button @click="matchState.mode = 'self'" 
+                            class="flex-1 py-3 rounded font-bold transition-colors border-2"
+                            :class="matchState.mode === 'self' ? 'bg-yellow-600 border-yellow-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-400'">
+                        自摸
+                    </button>
+                    <button @click="matchState.mode = 'discard'" 
+                            class="flex-1 py-3 rounded font-bold transition-colors border-2"
+                            :class="matchState.mode === 'discard' ? 'bg-blue-600 border-blue-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-400'">
+                        抓人
+                    </button>
+                </div>
+
+                <div v-if="matchState.mode === 'discard'" class="mb-4 bg-gray-900 p-3 rounded">
+                    <label class="block text-sm text-gray-400 mb-2">誰放槍？</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <template v-for="(player, idx) in currentSeats" :key="idx">
+                            <button v-if="idx !== matchState.winner"
+                                    @click="matchState.loser = idx"
+                                    class="py-2 px-1 rounded text-sm truncate transition-colors border relative"
+                                    :class="matchState.loser === idx ? 'bg-red-600 border-red-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-300'">
+                                {{ player }}
+                                <span v-if="idx === dealerIndex" class="absolute top-0 right-0 w-2 h-2 bg-orange-500 rounded-full"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="mb-6 bg-gray-900 p-3 rounded">
+                    <label class="block text-sm text-gray-400 mb-2 text-center">台數 (僅輸入牌型台)</label>
+                    <div class="flex items-center justify-center gap-4">
+                        <button @click="matchState.tai > 0 ? matchState.tai-- : 0" class="bg-gray-700 w-12 h-12 rounded-full text-xl shadow">-</button>
+                        <span class="text-4xl font-mono font-bold w-16 text-center text-white">{{ matchState.tai }}</span>
+                        <button @click="matchState.tai++" class="bg-gray-700 w-12 h-12 rounded-full text-xl shadow">+</button>
+                    </div>
+                    
+                    <div class="mt-4 text-center border-t border-gray-700 pt-2 space-y-1">
+                        <div class="text-xs text-gray-500">預計總收入</div>
+                        <div class="text-3xl text-green-400 font-bold font-mono">+{{ previewAmount.total }}</div>
+                        
+                        <div class="text-xs text-gray-400 mt-2">
+                            <div v-if="matchState.mode === 'self' && matchState.winner === dealerIndex">
+                                <span class="text-orange-400">莊家連{{ dealerCount }}通殺</span>
+                                <div class="text-[10px] text-gray-500">每家付: {{ previewAmount.detail[0] }}</div>
+                            </div>
+                            <div v-else-if="matchState.mode === 'self'">
+                                莊家付: <span class="text-red-300">{{ previewAmount.dealerPays }}</span> 
+                                (含連莊{{ 1 + dealerCount }}台)
+                                <br>
+                                閒家付: <span class="text-gray-300">{{ previewAmount.playerPays }}</span>
+                            </div>
+                            <div v-else>
+                                <div v-if="previewAmount.isDealerInvolved" class="text-orange-400">
+                                    含莊家連{{ dealerCount }} (加 {{ 1 + dealerCount }} 台)
+                                </div>
+                                放槍者付: <span class="text-red-400">{{ previewAmount.total }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button @click="matchState.isOpen = false" class="flex-1 bg-gray-600 py-3 rounded text-gray-200">取消</button>
+                    <button @click="confirmRound" class="flex-1 bg-green-600 py-3 rounded font-bold text-white shadow-lg">確認記帳</button>
+                </div>
+            </div>
+        </div>
+
+        <section>
+            <h3 class="text-lg font-bold mb-3 flex items-center text-gray-300">
+                對戰紀錄
+            </h3>
+            <div class="space-y-2">
+                <div v-for="(log, index) in reversedLogs" :key="log.id" class="bg-gray-800 p-3 rounded flex justify-between items-center text-sm border-l-4 border-gray-700">
+                    <div class="flex flex-col">
+                        <span class="text-gray-500 text-xs flex items-center gap-1">
+                            {{ new Date(log.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) }}
+                            <span v-if="log.dealer" class="text-orange-400 bg-orange-900 bg-opacity-30 px-1 rounded text-[10px]">
+                                莊:{{ log.dealer }} (連{{ log.dealerCount }})
+                            </span>
+                        </span>
+                        
+                        <div v-if="log.type === 'draw'" class="text-gray-400 font-bold mt-1">💨 臭莊流局</div>
+                        <div v-else class="mt-1">
+                            <span class="text-green-400 font-bold text-base">{{ log.winner }}</span>
+                            <span class="text-gray-400 mx-1">{{ log.type === 'self' ? '自摸' : '胡' }}</span>
+                            <span v-if="log.type === 'discard'" class="text-red-400 font-bold">{{ log.loser }}</span>
+                            <span class="text-gray-500 ml-1 text-xs">({{ log.tai }}台)</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <div class="font-mono font-bold text-lg text-yellow-500">
+                            {{ log.type === 'draw' ? '--' : '+' + log.amount }}
+                        </div>
+                        <button @click="deleteLog(log.id)" class="text-gray-600 hover:text-red-500 px-2">✕</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </div>
-    <div class="user-score" id="user1">使用者 1: 0 (莊: 0)</div>
-    <label for="select2" class="user1-add">
-    <select id="user1-add-choice" name="user1-add-choice">
-        <option value="" selected>選擇胡牌類型</option>
-        <option value=999>自摸</option>
-        <option value=0>胡牌/放槍</option>
-        <option value=-999>臭莊</option>
-    </select>
-    </label>
-    <div class="user-score" id="user2">使用者 2: 0 (莊: 0)</div>
-    <label for="select2" class="user2-add-choie">
-    <select id="user2-add-choice" name="user2-add-choice">
-        <option value="" selected>選擇胡牌類型</option>
-        <option value=999>自摸</option>
-        <option value=0>胡牌/放槍</option>
-        <option value=-999>臭莊</option>
-    </select>
-    </label>
-    <div class="user-score" id="user3">使用者 3: 0 (莊: 0)</div>
-    <label for="select2" class="user3-add-choie">
-    <select id="user3-add-choice" name="user3-add-choice">
-        <option value="" selected>選擇胡牌類型</option>
-        <option value=999>自摸</option>
-        <option value=0>胡牌/放槍</option>
-        <option value=-999>臭莊</option>
-    </select>
-    </label>
-    <div class="user-score" id="user4">使用者 4: 0 (莊: 0)</div>
-    <label for="select2" class="user4-add-choie">
-    <select id="user4-add-choice" name="user4-add-choice">
-        <option value="" selected>選擇胡牌類型</option>
-        <option value=999>自摸</option>
-        <option value=0>胡牌/放槍</option>
-        <option value=-999>臭莊</option>
-    </select>
-    </label>
-    <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
-    <script type="text/javascript">
-        
-        for (let j = 1; j <= 4; j++) {
-            const dropdown = document.getElementById(`user${j}-add`);
-            for (let i = -200; i <= 200; i += 5) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = i;
-                dropdown.appendChild(option);
-            }
-        }
 
-        const inputContainer = document.getElementById('input-container');
-        for (let i = 1; i<=4; i++) {
-            const inputField = document.createElement('input');
-            inputField.type = 'text';
-            inputField.id = `user${i}-input`;
-            inputField.className = 'user-name';
-            inputField.placeholder = `使用者 ${i}`;
-            inputContainer.appendChild(inputField);
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
 
-            // Create and append record divs
-            const recordDiv = document.createElement('div');
-            recordDiv.id = `user${i}-record`;
-            recordDiv.innerHTML = `: 0 ( 今天: 0 | 自摸: 0 | 胡牌: 0 | 放槍: 0 )`; // Initial content without name
-            inputContainer.appendChild(recordDiv);
+        createApp({
+            setup() {
+                // 資料與設定
+                const settings = ref({ base: 30, point: 10 });
+                const directions = ['東', '南', '西', '北'];
+                const currentSeats = ref(['玩家A', '玩家B', '玩家C', '玩家D']);
+                const dealerIndex = ref(0); 
+                const dealerCount = ref(0); // 連莊數
+                const logs = ref([]);
+                
+                const matchState = ref({
+                    isOpen: false,
+                    winner: null, 
+                    loser: null,
+                    mode: 'self',
+                    tai: 1
+                });
 
-            // Append a line break after each record div
-            inputContainer.appendChild(document.createElement('br'));
+                // --- 核心計算邏輯 ---
 
-            // Add event listener to update record name based on input
-            inputField.addEventListener('input', function() {
-                const name = this.value || `使用者 ${i}`;
-                try {
-                    let temp = document.getElementById(`user${i}-input`).value;
-                    document.getElementById(`user${i}-record`).innerHTML = `${name}: 0 ( 今天: ${record[temp]["daily"]} | 自摸: ${record[temp]["self-win"]} | 胡牌: ${record[temp]["win"]} | 放槍: ${record[temp]["lose"]} )`;
-                } catch(e) {}  
-            });
-        }
+                // 計算單次交易中，某個玩家應該付多少錢
+                const calculateTransaction = (log, playerName) => {
+                    const base = log.base || settings.value.base;
+                    const point = log.point || settings.value.point;
+                    const logDealer = log.dealer; 
+                    const logDealerCount = log.dealerCount || 0;
 
-        let record = ""
-        $(document).ready(function() {
-            $.getJSON("record.json", function(result) {
-                record = result
-            });
-        });
-        // 莊家為1，閒家為0，若連莊則莊家+1
-        let host = new Array(1, 0, 0, 0);
-        document.getElementById(`user${host.findIndex((element) => element >= 1)+1}`).style.color = "red"
-
-        function nextHost() {
-            let hostIndex = (host.findIndex((element) => element >= 1) + 1) % 4;
-            host = new Array(0, 0, 0, 0);
-            host[hostIndex] = 1;
-        }
-
-        // 函數處理加減按鈕
-        function addScore(user, value, selfWin) {
-            var name = document.getElementById(`user${user}-input`).value
-
-            if (isNaN(selfWin)) {
-                alert("請選擇自摸或胡牌/放槍")
-                return;
-            }
-            
-            if (selfWin == 0) { // 999 is 自摸, if the player doesn't 自摸
-                if (isNaN(value)) {
-                    alert("請輸入點數")
-                    return;
-                }
-
-                record[name]["daily"] += value
-                // > 0 means win once
-                if (value > 0) {
-                    if (host[user-1] >= 1) { // 連莊
-                        host[user-1] += 1;
+                    // ★ 計算應付金額核心公式
+                    // isDealerInvolved: 這次支付關係中是否有莊家參與
+                    const getPay = (tai, isDealerInvolved) => {
+                        let effectiveTai = tai;
+                        if (isDealerInvolved) {
+                            // 莊家台(1) + 連莊拉莊n
+                            effectiveTai += 1 + logDealerCount;
+                        }
+                        return base + (effectiveTai * point);
                     }
-                    else {
-                        nextHost();
-                    }
-                    record[name]["win"] += 1
-                } else if (value < 0) {
-                    record[name]["lose"] += 1
-                }
-            } else if (selfWin == 999) { // if the player 自摸
-                if (isNaN(value)) {
-                    alert("請輸入點數")
-                    return;
-                }
 
-                if (value <= 0) {
-                    alert("自摸不能輸入點數為0或負值")
-                    return;
-                }
-                record[name]["self-win"] += 1
-                if (host[user-1] >= 1)  {// if the player is 莊家
-                    for (let i = 1; i<=4; i++){
-                        if (i == user) continue; // ignore the winner in this loop
-                        let temp = document.getElementById(`user${i}-input`).value
-                        record[temp]["daily"] -= value
-                    }
-                    host[user-1] += 1;
-                    record[name]["daily"] += value * 3;
-                } else { // if the player is not 莊家
-                    if (isNaN(value)) {
-                        alert("請輸入點數")
-                        return;
-                    }
-                    for (let i = 1; i<=4; i++){
-                        if (i == user) continue; // ignore the winner in this loop
-                        if (host[i-1] != 0) {
-                            var hostUser = i-1; // get host player
-                            let temp = document.getElementById(`user${i}-input`).value
-                            record[temp]["daily"] -= value + document.getElementById('extra').value * host[hostUser]
-                        } else { // deal with non-host losing players' points
-                            let temp = document.getElementById(`user${i}-input`).value
-                            record[temp]["daily"] -= value
+                    if (log.type === 'draw') return 0;
+
+                    // 我是贏家 -> 收錢 (直接讀取紀錄的總額)
+                    if (log.winner === playerName) return log.amount; 
+
+                    // 我不是贏家，檢查我是否要付錢
+                    if (log.type === 'self') {
+                        const winnerIsDealer = (log.winner === logDealer);
+                        const amIDealer = (playerName === logDealer);
+
+                        if (winnerIsDealer) {
+                            // 莊家自摸：每家都付 (台 + 1 + 2n)
+                            return -getPay(log.tai, true);
+                        } else {
+                            // 閒家自摸
+                            if (amIDealer) {
+                                // 我是莊家，我付 (台 + 1 + 2n)
+                                return -getPay(log.tai, true);
+                            } else {
+                                // 我是閒家，我付 (台)
+                                return -getPay(log.tai, false);
+                            }
+                        }
+                    } else if (log.type === 'discard') {
+                        if (log.loser === playerName) {
+                            // 判斷是否有莊家參與 (贏家是莊 OR 輸家是莊)
+                            const isDealerInvolved = (log.winner === logDealer || log.loser === logDealer);
+                            return -getPay(log.tai, isDealerInvolved);
                         }
                     }
-                    record[name]["daily"] += value * 3 + document.getElementById('extra').value * host[hostUser]; // because the 莊家 has to be dealt differently (more points)
+                    return 0;
+                };
 
-                    document.getElementById(`user${hostUser+1}`).style.color = "black"
-                    nextHost();
+                const getPlayerScore = (name) => {
+                    if (!name) return 0;
+                    let total = 0;
+                    logs.value.forEach(log => {
+                        total += calculateTransaction(log, name);
+                    });
+                    return Math.round(total);
+                };
+
+                const getPlayerStats = (name) => {
+                    if (!name) return { win: 0, self: 0, lose: 0 };
+                    let stats = { win: 0, self: 0, lose: 0 };
+                    logs.value.forEach(log => {
+                        if (log.type === 'draw') return;
+                        if (log.winner === name) {
+                            stats.win++;
+                            if (log.type === 'self') stats.self++;
+                        }
+                        if (log.type === 'discard' && log.loser === name) {
+                            stats.lose++;
+                        }
+                    });
+                    return stats;
+                };
+
+                // 預覽金額 (給 Modal 顯示用)
+                const previewAmount = computed(() => {
+                    const base = settings.value.base;
+                    const point = settings.value.point;
+                    const tai = matchState.value.tai;
+                    const winnerIdx = matchState.value.winner;
+                    const loserIdx = matchState.value.loser;
                     
-                }
-            } else { // 臭莊
-                if (host[user-1] <= 0) {
-                    alert("該玩家非莊家");
-                    return;
-                }
-                host[user-1] += 1;
-                console.log(host)
+                    const winnerIsDealer = (winnerIdx === dealerIndex.value);
+                    const loserIsDealer = (loserIdx === dealerIndex.value);
+                    
+                    // 單價計算
+                    const payNormal = base + (tai * point);     
+                    // 莊家參與價：台 + 1 + 2n
+                    const dealerExtraTai = 1 + (dealerCount.value);
+                    const payDealer = base + ((tai + dealerExtraTai) * point);
+
+                    if (matchState.value.mode === 'self') {
+                        if (winnerIsDealer) {
+                            // 莊家自摸：三家都付 Dealer Price
+                            return { total: payDealer * 3, detail: [payDealer], isDealerInvolved: true };
+                        } else {
+                            // 閒家自摸：莊家付 Dealer Price，另外兩家付 Normal
+                            const total = payDealer + (payNormal * 2);
+                            return { total, dealerPays: payDealer, playerPays: payNormal, isDealerInvolved: true };
+                        }
+                    } else {
+                        // 放槍
+                        if (loserIdx === null) return { total: 0 };
+                        const isDealerInvolved = winnerIsDealer || loserIsDealer;
+                        const total = isDealerInvolved ? payDealer : payNormal;
+                        return { total, isDealerInvolved };
+                    }
+                });
+
+                // --- 操作 ---
+                const setDealer = (index) => {
+                    // 如果點擊已經是莊家的人，不動作（避免誤觸重置）
+                    if (dealerIndex.value !== index) {
+                        if(confirm(`確定換 ${currentSeats.value[index]} 做莊？連莊數將歸零。`)){
+                            dealerIndex.value = index;
+                            dealerCount.value = 0;
+                            saveData(); 
+                        }
+                    }
+                };
+
+                const openWinModal = (index) => {
+                    matchState.value = {
+                        isOpen: true,
+                        winner: index,
+                        loser: null,
+                        mode: 'self',
+                        tai: 1
+                    };
+                };
+
+                const confirmRound = () => {
+                    const { winner, loser, mode, tai } = matchState.value;
+                    
+                    if (mode === 'discard' && loser === null) return alert("請選擇放槍者");
+                    if (mode === 'discard' && winner === loser) return alert("贏家輸家不能同一人");
+
+                    const currentDealerName = currentSeats.value[dealerIndex.value];
+                    const amount = previewAmount.value.total;
+
+                    // 記錄
+                    logs.value.push({
+                        id: Date.now(),
+                        time: Date.now(),
+                        winner: currentSeats.value[winner],
+                        loser: mode === 'discard' ? currentSeats.value[loser] : 'ALL',
+                        type: mode,
+                        tai: tai,
+                        amount: amount,
+                        dealer: currentDealerName, 
+                        dealerCount: dealerCount.value, // 存當下連莊數
+                        base: settings.value.base,
+                        point: settings.value.point 
+                    });
+
+                    // ★ 自動化莊家邏輯
+                    const winnerIsDealer = (winner === dealerIndex.value);
+                    const loserIsDealer = (loser === dealerIndex.value);
+
+                    if (winnerIsDealer) {
+                        // 莊家贏 -> 連莊 + 1
+                        dealerCount.value++;
+                    } else {
+                        // 閒家贏 -> 莊家下莊
+                        // 規則判斷：若是閒家胡閒家，莊家是否下莊？
+                        // 台灣規則通常是：只要莊家沒胡牌（且沒流局），就下莊。
+                        // 所以閒家互打，莊家也要下莊。
+                        moveToNextDealer();
+                    }
+                    
+                    matchState.value.isOpen = false;
+                    saveData();
+                };
+
+                const addDrawRecord = () => {
+                    logs.value.push({
+                        id: Date.now(),
+                        time: Date.now(),
+                        type: 'draw',
+                        dealer: currentSeats.value[dealerIndex.value],
+                        dealerCount: dealerCount.value
+                    });
+                    // 臭莊 -> 連莊 + 1
+                    dealerCount.value++;
+                    saveData();
+                };
+
+                const moveToNextDealer = () => {
+                    dealerCount.value = 0;
+                    dealerIndex.value = (dealerIndex.value + 1) % 4;
+                };
+
+                const manualResetDealer = () => {
+                    if(confirm("強制換下家做莊？")) moveToNextDealer();
+                    saveData();
+                };
+
+                const shuffleSeats = () => {
+                    if(!confirm("重新抓位？")) return;
+                    let array = [...currentSeats.value];
+                    for (let i = array.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [array[i], array[j]] = [array[j], array[i]];
+                    }
+                    currentSeats.value = array;
+                    dealerIndex.value = 0; 
+                    dealerCount.value = 0;
+                    saveData();
+                };
+
+                const deleteLog = (id) => {
+                    if(!confirm("刪除此紀錄？(注意：不會復原連莊數)")) return;
+                    logs.value = logs.value.filter(l => l.id !== id);
+                    saveData();
+                };
+
+                const resetData = () => {
+                    if(confirm("清空所有資料？")) {
+                        logs.value = [];
+                        dealerIndex.value = 0;
+                        dealerCount.value = 0;
+                        saveData();
+                    }
+                };
+
+                const reversedLogs = computed(() => [...logs.value].reverse());
+
+                const saveData = () => {
+                    localStorage.setItem('mj_seats', JSON.stringify(currentSeats.value));
+                    localStorage.setItem('mj_logs', JSON.stringify(logs.value));
+                    localStorage.setItem('mj_settings', JSON.stringify(settings.value));
+                    localStorage.setItem('mj_dealer', dealerIndex.value);
+                    localStorage.setItem('mj_dealerCount', dealerCount.value);
+                };
+
+                const loadData = () => {
+                    const s = localStorage.getItem('mj_seats');
+                    const l = localStorage.getItem('mj_logs');
+                    const st = localStorage.getItem('mj_settings');
+                    const d = localStorage.getItem('mj_dealer');
+                    const dc = localStorage.getItem('mj_dealerCount');
+                    
+                    if (s) currentSeats.value = JSON.parse(s);
+                    if (l) logs.value = JSON.parse(l);
+                    if (st) settings.value = JSON.parse(st);
+                    if (d) dealerIndex.value = parseInt(d);
+                    if (dc) dealerCount.value = parseInt(dc);
+                };
+
+                onMounted(loadData);
+
+                return {
+                    settings, directions, currentSeats, dealerIndex, dealerCount, logs, reversedLogs,
+                    matchState, previewAmount,
+                    getPlayerScore, getPlayerStats,
+                    setDealer, openWinModal, confirmRound,
+                    shuffleSeats, addDrawRecord, deleteLog, resetData, manualResetDealer
+                };
             }
-            updateResult();
-            document.getElementById(`user${host.findIndex((element) => element >= 1)+1}`).style.color = "red"
-        }
-
-        // Add an event listener to the input boxes
-        document.querySelectorAll('.user-name').forEach(function(input, index) {
-            input.addEventListener('input', function() {
-                updateOutput(index + 1, input.value);
-            });
-        });
-
-        // Function to update the output container
-        function updateOutput(inputNumber, value) {
-            // Get the output container element
-            const outputContainer = document.getElementById(`user${inputNumber}`);
-            try {
-                let temp = document.getElementById(`user${inputNumber}-input`).value
-            
-                // Update the content of the output container
-                outputContainer.innerHTML = `${value}: ${record[temp]["daily"]}  (莊: ${host[inputNumber-1]})`;
-            } catch(e) {}
-        }
-
-        function updateResult() {
-            for (let i = 1; i<=4; i++){
-                let temp = document.getElementById(`user${i}-input`).value
-                document.getElementById(`user${i}-record`).innerText = `${document.getElementById(`user${i}-input`).value}: 0 ( 今天: ${record[temp]["daily"]} | 自摸: ${record[temp]["self-win"]} | 胡牌: ${record[temp]["win"]} | 放槍: ${record[temp]["lose"]} )`;
-                // 更新各使用者分數
-                document.getElementById(`user${i}`).innerText = `${document.getElementById(`user${i}-input`).value}: ${record[temp]["daily"]} (莊: ${host[i-1]})`;
-                document.getElementById(`user${i}`).style.color = "black"
-                document.getElementById(`user${i}-add`).value = ""
-                document.getElementById(`user${i}-add-choice`).value = ""
-            }
-            document.getElementById(`user${host.findIndex((element) => element >= 1)+1}`).style.color = "red"
-        }
-
-        function shufflePos() {
-            let pos = new Array();
-            for (let i = 1; i<=4; i++) {
-                let temp = document.getElementById(`user${i}-input`).value;
-                pos.push(temp);
-            }
-            let currentIndex = pos.length;
-            console.log(pos)
-            // While there remain elements to shuffle...
-            while (currentIndex != 0) {
-
-                // Pick a remaining element...
-                let randomIndex = Math.floor(Math.random() * currentIndex);
-                currentIndex--;
-
-                // And swap it with the current element.
-                [pos[currentIndex], pos[randomIndex]] = [
-                pos[randomIndex], pos[currentIndex]];
-            }
-            console.log(pos)
-            for (let i = 1; i<=4; i++) {
-                console.log(document.getElementById(`user${i}-input`).value)
-                document.getElementById(`user${i}-input`).value = pos[i-1];
-                console.log(document.getElementById(`user${i}-input`).value)
-            }
-            updateResult();
-        }
-
-        // Function to reset the calculator but doesn't submit the record to json file
-        function reset() {
-            for (let index = 1; index <= 4; index++) {
-                document.getElementById(`user${index}-input`).value = ""
-                document.getElementById(`user${index}-record`).innerText = ": 0 ( 今天: 0 | 自摸: 0 | 胡牌: 0 | 放槍: 0 )"
-                document.getElementById(`user${index}`).innerText = `使用者 ${index}: 0  (莊: ${host[index-1]})`
-            }
-        }
+        }).mount('#app');
     </script>
-
 </body>
 </html>
