@@ -182,22 +182,20 @@
                     const allPlayerNames = new Set();
                     
                     logs.value.forEach(log => {
+                        // 1. 從贏家、輸家、莊家抓 (兼容舊資料)
                         if(log.winner) allPlayerNames.add(log.winner);
                         if(log.loser && log.loser !== 'ALL') allPlayerNames.add(log.loser);
                         if(log.dealer) allPlayerNames.add(log.dealer);
-                    });
-
-                    try {
-                        const localSeats = localStorage.getItem('mj_seats');
-                        if (localSeats) {
-                            const seatsArray = JSON.parse(localSeats);
-                            seatsArray.forEach(name => {
-                                if (name) allPlayerNames.add(name);
+                        
+                        // ★ 2. 這裡只從「已經存入 log 且確認存在的玩家名單」抓人
+                        if(log.players && Array.isArray(log.players)) {
+                            log.players.forEach(p => {
+                                if (p) allPlayerNames.add(p);
                             });
                         }
-                    } catch (e) {
-                        console.log("讀取本地座位失敗", e);
-                    }
+                    });
+
+                    // ★ 3. 已經完全移除 localStorage 的讀取，防止還沒開打的幽靈名字上榜
 
                     // 取得今日時間基準點
                     const today = new Date();
