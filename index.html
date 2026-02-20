@@ -150,17 +150,16 @@
     <script>
         const { createApp, ref, computed, onMounted } = Vue;
 
-        // ★★★ 請務必在這裡填入你的 Supabase 資訊 (只宣告這一次) ★★★
-        const SUPABASE_URL = 'https://hyhmwlbsdvlssfmdsmux.supabase.co'; // 結尾不要有斜線
+        // ★★★ 請填入你的 Supabase 資訊 ★★★
+        const SUPABASE_URL = 'https://hyhmwlbsdvlssfmdsmux.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_OZRd4Lcc7gK6aLMmbpxBng_YpSmnfnR'; 
-        console.log('1')
-        // 這裡建立一次連線，全域使用
+        
         const supabase_con = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        console.log('1')
+
         createApp({
             setup() {
                 const isLoading = ref(false);
-                const settings = ref({ base: 30, point: 10 });
+                const settings = ref({ base: 20, point: 10 });
                 const directions = ['東', '南', '西', '北'];
                 const currentSeats = ref(['玩家A', '玩家B', '玩家C', '玩家D']);
                 const dealerIndex = ref(0); 
@@ -169,76 +168,106 @@
                 
                 const matchState = ref({ isOpen: false, winner: null, loser: null, mode: 'self', tai: 1 });
 
-                // 資料庫讀取 (Read)
-                // 修改 index.html 中的 fetchLogs
+                // ==========================================
+                // ★ 新增：即時桌況同步系統 (Game State)
+                // ==========================================
+
+                // 1. 初次載入時，從雲端抓取目前桌況
+                const fetchGameState = async () => {
+                    const { data, error } = await supabase_con
+                        .from('game_state')
+                        .select('*')
+                        .eq('id', 1)
+                        .single();
+                    
+                    if (data) {
+                        currentSeats.value = data.seats || currentSeats.value;
+                        dealerIndex.value = data.dealer_index ?? 0;
+                        dealerCount.value = data.dealer_count ?? 0;
+                        settings.value.base = data.base ?? 20;
+                        settings.value.point = data.point ?? 10;
+                    }
+                };
+
+                // 2. 當有人修改座位/莊家/底台時，推送到雲端
+                const syncGameState = async () => {
+                    await supabase_con.from('game_state').update({
+                        seats: currentSeats.value,
+                        dealer_index: dealerIndex.value,
+                        dealer_count: dealerCount.value,
+                        base: settings.value.base,
+                        point: settings.value.point
+                    }).eq('id', 1);
+                };
+
+                // 3. 監聽雲端變化 (如果別人改了，我的畫面要跟著變)
+                const listenToGameState = () => {
+                    supabase_con
+                        .channel('game_state_channel') // 建立一個監聽頻道
+                        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game_state' }, payload => {
+                            // 當收到別人更新的廣播時，覆蓋我目前的畫面
+                            const data = payload.new;
+                            currentSeats.value = data.seats;
+                            dealerIndex.value = data.dealer_index;
+                            dealerCount.value = data.dealer_count;
+                            settings.value.base = data.base;
+                            settings.value.point = data.point;
+                        })
+                        .subscribe();
+                };
+
+                // (為了讓 HTML 綁定的 @change 繼續運作，把舊名稱指派給新功能)
+                const saveLocalSettings = syncGameState; 
+
+                // ==========================================
+                // 以下為原本的戰績存取邏輯 (Logs)
+                // ==========================================
+
                 const fetchLogs = async () => {
                     isLoading.value = true;
-                    
-                    // 取得今天凌晨 00:00 的時間戳記
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
                     const todayTimestamp = today.getTime();
 
-                    // 只抓取時間 > 今天凌晨的資料
                     const { data, error } = await supabase_con
                         .from('logs')
                         .select('*')
-                        .gte('time', todayTimestamp) // gte = greater than or equal (大於等於)
+                        .gte('time', todayTimestamp)
                         .order('time', { ascending: true });
                     
-                    if (error) {
-                        console.error('讀取失敗:', error);
-                        alert('讀取失敗: ' + error.message);
-                    } else {
-                        logs.value = data || [];
-                    }
+                    if (!error) logs.value = data || [];
                     isLoading.value = false;
                 };
 
-                // 資料庫寫入 (Create)
                 const insertLog = async (newLog) => {
                     isLoading.value = true;
-                    const dbLog = {
-                        ...newLog,
-                        dealer_count: newLog.dealerCount // mapping
-                    };
+                    const dbLog = { ...newLog, dealer_count: newLog.dealerCount };
                     delete dbLog.dealerCount; 
 
                     const { error } = await supabase_con.from('logs').insert([dbLog]);
-                    if (error) {
-                        console.error('寫入失敗:', error);
-                        alert('寫入失敗: ' + error.message);
-                    } else {
-                        await fetchLogs(); // 寫入成功後重新抓取
-                    }
+                    if (error) alert('寫入失敗: ' + error.message);
+                    else await fetchLogs(); 
                     isLoading.value = false;
                 };
 
-                // 資料庫刪除 (Delete)
                 const deleteLog = async (id) => {
                     if(!confirm("確定從資料庫永久刪除此紀錄？")) return;
                     isLoading.value = true;
-                    const { error } = await supabase_con.from('logs').delete().eq('id', id);
-                    if (error) {
-                        alert('刪除失敗: ' + error.message);
-                    } else {
-                        await fetchLogs();
-                    }
+                    await supabase_con.from('logs').delete().eq('id', id);
+                    await fetchLogs();
                     isLoading.value = false;
                 };
                 
-                // 清空資料庫
                 const resetDB = async () => {
-                    if(!confirm("警告：這將清空記分板本地紀錄！無法復原！")) return;
+                    if(!confirm("警告：這將清空【今天】的所有紀錄！")) return;
                     isLoading.value = true;
-                    const { error } = await supabase_con.from('logs').delete().gt('id', 0);
-                    if (error) alert(error.message);
-                    else {
-                        logs.value = [];
-                        dealerIndex.value = 0;
-                        dealerCount.value = 0;
-                        saveLocalSettings();
-                    }
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    await supabase_con.from('logs').delete().gte('time', today.getTime());
+                    logs.value = [];
+                    dealerIndex.value = 0;
+                    dealerCount.value = 0;
+                    syncGameState(); // 同步重置狀態給所有人
                     isLoading.value = false;
                 };
 
@@ -265,10 +294,7 @@
                         const winnerIsDealer = (log.winner === logDealer);
                         const amIDealer = (playerName === logDealer);
                         if (winnerIsDealer) return -getPay(log.tai, true);
-                        else {
-                            if (amIDealer) return -getPay(log.tai, true);
-                            else return -getPay(log.tai, false);
-                        }
+                        else return amIDealer ? -getPay(log.tai, true) : -getPay(log.tai, false);
                     } else if (log.type === 'discard') {
                         if (log.loser === playerName) {
                             const isDealerInvolved = (log.winner === logDealer || log.loser === logDealer);
@@ -290,6 +316,8 @@
                     let stats = { win: 0, self: 0, lose: 0 };
                     logs.value.forEach(log => {
                         if (log.type === 'draw') return;
+                        if (log.players && Array.isArray(log.players) && !log.players.includes(name)) return;
+
                         if (log.winner === name) {
                             stats.win++;
                             if (log.type === 'self') stats.self++;
@@ -309,7 +337,7 @@
                     const loserIsDealer = (loserIdx === dealerIndex.value);
                     
                     const payNormal = base + (tai * point);     
-                    const dealerExtraTai = 1 + (dealerCount.value);
+                    const dealerExtraTai = 1 + (dealerCount.value * 2);
                     const payDealer = base + ((tai + dealerExtraTai) * point);
 
                     if (matchState.value.mode === 'self') {
@@ -328,32 +356,13 @@
 
                 const reversedLogs = computed(() => [...logs.value].reverse());
 
-                // --- 狀態保存 ---
-                const saveLocalSettings = () => {
-                    localStorage.setItem('mj_seats', JSON.stringify(currentSeats.value));
-                    localStorage.setItem('mj_settings', JSON.stringify(settings.value));
-                    localStorage.setItem('mj_dealer', dealerIndex.value);
-                    localStorage.setItem('mj_dealerCount', dealerCount.value);
-                };
-
-                const loadLocalSettings = () => {
-                    const s = localStorage.getItem('mj_seats');
-                    const st = localStorage.getItem('mj_settings');
-                    const d = localStorage.getItem('mj_dealer');
-                    const dc = localStorage.getItem('mj_dealerCount');
-                    if (s) currentSeats.value = JSON.parse(s);
-                    if (st) settings.value = JSON.parse(st);
-                    if (d) dealerIndex.value = parseInt(d);
-                    if (dc) dealerCount.value = parseInt(dc);
-                };
-
                 // --- 操作 ---
                 const setDealer = (index) => {
                     if (dealerIndex.value !== index) {
                         if(confirm(`換 ${currentSeats.value[index]} 做莊？連莊數歸零。`)){
                             dealerIndex.value = index;
                             dealerCount.value = 0;
-                            saveLocalSettings();
+                            syncGameState(); // 同步到雲端
                         }
                     }
                 };
@@ -382,7 +391,6 @@
                         dealerCount: dealerCount.value, 
                         base: settings.value.base,
                         point: settings.value.point,
-                        // ★★★ 新增這一行：把目前座位上的四個人名單存進去 ★★★
                         players: [...currentSeats.value]
                     };
 
@@ -390,10 +398,13 @@
 
                     const winnerIsDealer = (winner === dealerIndex.value);
                     if (winnerIsDealer) dealerCount.value++;
-                    else moveToNextDealer();
+                    else {
+                        dealerCount.value = 0;
+                        dealerIndex.value = (dealerIndex.value + 1) % 4;
+                    }
                     
                     matchState.value.isOpen = false;
-                    saveLocalSettings();
+                    syncGameState(); // 結算後同步最新的莊家狀態
                 };
 
                 const addDrawRecord = () => {
@@ -402,21 +413,20 @@
                         time: Date.now(),
                         type: 'draw',
                         dealer: currentSeats.value[dealerIndex.value],
-                        dealerCount: dealerCount.value
+                        dealerCount: dealerCount.value,
+                        players: [...currentSeats.value]
                     };
                     insertLog(newLog);
                     dealerCount.value++;
-                    saveLocalSettings();
-                };
-
-                const moveToNextDealer = () => {
-                    dealerCount.value = 0;
-                    dealerIndex.value = (dealerIndex.value + 1) % 4;
+                    syncGameState(); // 臭莊後同步連莊數
                 };
 
                 const manualResetDealer = () => {
-                    if(confirm("強制換下家做莊？")) moveToNextDealer();
-                    saveLocalSettings();
+                    if(confirm("強制換下家做莊？")) {
+                        dealerCount.value = 0;
+                        dealerIndex.value = (dealerIndex.value + 1) % 4;
+                        syncGameState();
+                    }
                 };
 
                 const shuffleSeats = () => {
@@ -429,12 +439,14 @@
                     currentSeats.value = array;
                     dealerIndex.value = 0; 
                     dealerCount.value = 0;
-                    saveLocalSettings();
+                    syncGameState(); // 洗牌後馬上同步給其他人
                 };
 
+                // 當程式啟動時...
                 onMounted(() => {
-                    loadLocalSettings(); 
-                    fetchLogs(); 
+                    fetchLogs();          // 1. 抓今日戰績
+                    fetchGameState();     // 2. 抓雲端桌況
+                    listenToGameState();  // 3. 開啟即時監聽天線
                 });
 
                 return {
