@@ -247,8 +247,8 @@
                     if (log.players && Array.isArray(log.players)) {
                         if (!log.players.includes(playerName)) return 0;
                     }
-                    const base = log.base || settings.value.base;
-                    const point = log.point || settings.value.point;
+                    const base = settings.value.base;
+                    const point = settings.value.point;
                     const logDealer = log.dealer; 
                     const logDealerCount = log.dealer_count || 0; 
 
