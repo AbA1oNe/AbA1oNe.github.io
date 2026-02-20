@@ -62,9 +62,14 @@
                             </div>
                         </div>
 
-                        <div class="text-right min-w-[100px]">
-                            <div class="text-3xl font-mono font-bold" :class="player.score >= 0 ? 'text-yellow-400' : 'text-gray-400'">
-                                {{ player.score > 0 ? '+' : ''}}{{ player.score }}
+                        <div class="text-right min-w-[140px]">
+                            <div class="font-mono font-bold">
+                                <span class="text-3xl" :class="player.todayScore >= 0 ? 'text-yellow-400' : 'text-gray-400'" title="今日成績">
+                                    {{ player.todayScore > 0 ? '+' : ''}}{{ player.todayScore }}
+                                </span>
+                                <span class="text-lg ml-1" :class="player.totalScore >= 0 ? 'text-green-400' : 'text-red-400'" title="生涯總成績">
+                                    ({{ player.totalScore > 0 ? '+' : ''}}{{ player.totalScore }})
+                                </span>
                             </div>
                             <div class="text-xs text-gray-500 mt-1">
                                 胡 {{ player.wins }} / 放 {{ player.lose }} / 自 {{ player.self }}
@@ -136,12 +141,10 @@
 
                 // 核心計算
                 const calculateTransaction = (log, playerName) => {
-                    // ★★★ 新增判斷：如果這筆紀錄有存名單，且我不名單內，就與我無關 ★★★
                     if (log.players && Array.isArray(log.players)) {
-                        if (!log.players.includes(playerName)) {
-                            return 0; // 我沒打這把，不用付錢
-                        }
+                        if (!log.players.includes(playerName)) return 0;
                     }
+
                     const base = log.base || 30;
                     const point = log.point || 10;
                     const logDealer = log.dealer; 
@@ -175,34 +178,36 @@
                     isLoading.value = false;
                 };
 
-                // ★ 重點修改：計算所有玩家數據 (包含從 LocalStorage 讀取當前玩家)
                 const allRankedPlayers = computed(() => {
                     const allPlayerNames = new Set();
                     
-                    // 1. 從資料庫 Logs 找出出現過的人
                     logs.value.forEach(log => {
                         if(log.winner) allPlayerNames.add(log.winner);
                         if(log.loser && log.loser !== 'ALL') allPlayerNames.add(log.loser);
                         if(log.dealer) allPlayerNames.add(log.dealer);
                     });
 
-                    // 2. ★ 新增：嘗試從瀏覽器 LocalStorage 讀取「目前座位上的玩家」
-                    // 這樣就算這個人還沒胡過牌，也會被加入計算列表
                     try {
                         const localSeats = localStorage.getItem('mj_seats');
                         if (localSeats) {
                             const seatsArray = JSON.parse(localSeats);
                             seatsArray.forEach(name => {
-                                if (name && !name.startsWith("玩家")) allPlayerNames.add(name);
+                                if (name) allPlayerNames.add(name);
                             });
                         }
                     } catch (e) {
                         console.log("讀取本地座位失敗", e);
                     }
 
+                    // 取得今日時間基準點
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const todayTimestamp = today.getTime();
+
                     const result = [];
                     allPlayerNames.forEach(name => {
-                        let score = 0;
+                        let totalScore = 0; // 生涯總分
+                        let todayScore = 0; // 今日總分
                         let wins = 0;
                         let self = 0;
                         let lose = 0;
@@ -210,7 +215,19 @@
                         
                         logs.value.forEach(log => {
                             if (log.type === 'draw') return;
-                            score += calculateTransaction(log, name);
+                            
+                            // 計算這筆紀錄的得分
+                            const delta = calculateTransaction(log, name);
+                            
+                            // 加總進生涯總分
+                            totalScore += delta;
+
+                            // 如果是今天發生的，也加總進今日總分
+                            if (log.time >= todayTimestamp) {
+                                todayScore += delta;
+                            }
+
+                            // 歷史各項指標統計
                             if (log.winner === name) {
                                 wins++;
                                 totalTai += (log.tai || 0);
@@ -219,7 +236,6 @@
                             if (log.type === 'discard' && log.loser === name) lose++;
                         });
 
-                        // 判斷 KD 無限大
                         let kdRaw = lose === 0 ? wins : (wins / lose);
                         let kdDisplay = lose === 0 && wins > 0 ? "∞" : (Math.round(kdRaw * 100) / 100);
                         if (lose === 0 && wins === 0) kdDisplay = 0;
@@ -229,18 +245,18 @@
 
                         result.push({
                             name: name,
-                            score: Math.round(score),
+                            totalScore: Math.round(totalScore), // 歷史總分
+                            todayScore: Math.round(todayScore), // 今日分數
                             wins, lose, self, avgTai, selfRate,
                             kd: kdDisplay,
                             kdVal: kdRaw 
                         });
                     });
 
-                    // 排序
-                    return result.sort((a, b) => b.score - a.score);
+                    // ★ 排名邏輯：依照生涯總成績 (totalScore) 來做大排名
+                    return result.sort((a, b) => b.totalScore - a.totalScore);
                 });
 
-                // 搜尋過濾
                 const filteredPlayers = computed(() => {
                     if (!searchQuery.value) return allRankedPlayers.value;
                     return allRankedPlayers.value.filter(p => 
@@ -248,7 +264,6 @@
                     );
                 });
 
-                // 分頁邏輯
                 const totalPages = computed(() => Math.ceil(filteredPlayers.value.length / pageSize));
                 
                 const paginatedPlayers = computed(() => {
@@ -286,18 +301,8 @@
                 });
 
                 return {
-                    isLoading,
-                    searchQuery,
-                    paginatedPlayers,
-                    currentPage,
-                    totalPages,
-                    nextPage,
-                    prevPage,
-                    getActualRank,
-                    getRankColor,
-                    getKdColor,
-                    recentLogs,
-                    showRecent
+                    isLoading, searchQuery, paginatedPlayers, currentPage, totalPages,
+                    nextPage, prevPage, getActualRank, getRankColor, getKdColor, recentLogs, showRecent
                 };
             }
         }).mount('#app');
