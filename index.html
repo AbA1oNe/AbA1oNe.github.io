@@ -337,7 +337,7 @@
                     const loserIsDealer = (loserIdx === dealerIndex.value);
                     
                     const payNormal = base + (tai * point);     
-                    const dealerExtraTai = 1 + (dealerCount.value * 2);
+                    const dealerExtraTai = 1 + dealerCount.value;
                     const payDealer = base + ((tai + dealerExtraTai) * point);
 
                     if (matchState.value.mode === 'self') {
