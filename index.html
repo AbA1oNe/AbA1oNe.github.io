@@ -273,36 +273,79 @@
 
                 // --- 核心計算 ---
                 const calculateTransaction = (log, playerName) => {
-                    if (log.players && Array.isArray(log.players)) {
-                        if (!log.players.includes(playerName)) return 0;
+                // 1. 檢查名單：如果這局有名單，且我不在場上，就與我無關
+                if (log.players && Array.isArray(log.players)) {
+                    if (!log.players.includes(playerName)) return 0;
+                }
+
+                // 2. 防呆轉型：強制轉為 Number，避免字串相加陷阱 (例如 1 + "1" 變成 11)
+                // 優先讀取 log 紀錄的底台，若無則取 30/10 作為保底
+                const base = Number(log.base ?? (typeof settings !== 'undefined' ? settings.value.base : 30));
+                const point = Number(log.point ?? (typeof settings !== 'undefined' ? settings.value.point : 10));
+                const tai = Number(log.tai || 0);
+                
+                const logDealer = log.dealer; 
+                // 相容性：同時支援新版 dealer_count 與極舊版的 dealerCount
+                const logDealerCount = Number(log.dealer_count ?? log.dealerCount ?? 0); 
+
+                // 3. 計費公式：(底 + 台數 * 台錢)
+                // 你的連莊規則為：1 (莊家台) + 連莊數
+                const getPay = (t, isDealerInvolved) => {
+                    let effectiveTai = t;
+                    if (isDealerInvolved) {
+                        effectiveTai += 1 + logDealerCount;
                     }
-                    const base = settings.value.base;
-                    const point = settings.value.point;
-                    const logDealer = log.dealer; 
-                    const logDealerCount = log.dealer_count || 0; 
+                    return base + (effectiveTai * point);
+                }
 
-                    const getPay = (tai, isDealerInvolved) => {
-                        let effectiveTai = tai;
-                        if (isDealerInvolved) effectiveTai += 1 + (logDealerCount);
-                        return base + (effectiveTai * point);
-                    }
+                if (log.type === 'draw') return 0;
 
-                    if (log.type === 'draw') return 0;
-                    if (log.winner === playerName) return log.amount; 
+                // 定義角色狀態
+                const winnerIsDealer = (log.winner === logDealer);
+                const loserIsDealer = (log.loser === logDealer);
+                const amIDealer = (playerName === logDealer);
 
+                // ==========================================
+                // ★ 贏家邏輯 (不再讀取 log.amount，改為動態重算)
+                // ==========================================
+                if (log.winner === playerName) {
                     if (log.type === 'self') {
-                        const winnerIsDealer = (log.winner === logDealer);
-                        const amIDealer = (playerName === logDealer);
-                        if (winnerIsDealer) return -getPay(log.tai, true);
-                        else return amIDealer ? -getPay(log.tai, true) : -getPay(log.tai, false);
-                    } else if (log.type === 'discard') {
-                        if (log.loser === playerName) {
-                            const isDealerInvolved = (log.winner === logDealer || log.loser === logDealer);
-                            return -getPay(log.tai, isDealerInvolved);
+                        if (winnerIsDealer) {
+                            // 莊家自摸：向三家收「含莊家台」的錢
+                            return getPay(tai, true) * 3;
+                        } else {
+                            // 閒家自摸：向莊家收「含莊家台」的錢 + 向兩家閒家收「正常」的錢
+                            return getPay(tai, true) + (getPay(tai, false) * 2);
                         }
+                    } else if (log.type === 'discard') {
+                        // 放槍：只要贏家或輸家其中一人是莊，就含莊家台
+                        const isDealerInvolved = winnerIsDealer || loserIsDealer;
+                        return getPay(tai, isDealerInvolved);
                     }
-                    return 0;
-                };
+                }
+
+                // ==========================================
+                // ★ 輸家邏輯 (與贏家邏輯完全對稱)
+                // ==========================================
+                if (log.type === 'self') {
+                    if (winnerIsDealer) {
+                        // 被莊家自摸：每個人都要付「含莊家台」的錢
+                        return -getPay(tai, true);
+                    } else {
+                        // 被閒家自摸：如果我是莊家付「含莊家台」，我是閒家付「正常」的錢
+                        return amIDealer ? -getPay(tai, true) : -getPay(tai, false);
+                    }
+                } else if (log.type === 'discard') {
+                    if (log.loser === playerName) {
+                        // 我放槍：只要贏家或輸家其中一人是莊，就付「含莊家台」的錢
+                        const isDealerInvolved = winnerIsDealer || loserIsDealer;
+                        return -getPay(tai, isDealerInvolved);
+                    }
+                }
+
+                // 如果我是閒家，且是別人放槍給別人，就回傳 0
+                return 0;
+            };
 
                 const getPlayerScore = (name) => {
                     if (!name) return 0;
