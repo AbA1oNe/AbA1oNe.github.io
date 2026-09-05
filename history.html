@@ -250,9 +250,9 @@
                     // ★ 新增：找出今天最後一次按「重新開局(reset)」的時間
                     let currentSessionStartTime = todayTimestamp;
                     const latestResetIndex = logs.value.findIndex(l => l.type === 'reset');
-                    if (lastResetIndex !== -1) {
+                    if (latestResetIndex !== -1) {
                         // 確保轉為時間戳記數字
-                        const resetTime = new Date(logs.value[lastResetIndex].time).getTime();
+                        const resetTime = new Date(logs.value[latestResetIndex].time).getTime();
                         if (resetTime >= todayTimestamp) {
                             currentSessionStartTime = resetTime;
                         }
