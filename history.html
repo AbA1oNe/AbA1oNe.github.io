@@ -247,6 +247,17 @@
                     today.setHours(0, 0, 0, 0);
                     const todayTimestamp = today.getTime();
 
+                    // ★ 新增：找出今天最後一次按「重新開局(reset)」的時間
+                    let currentSessionStartTime = todayTimestamp;
+                    const lastResetIndex = logs.value.map(l => l.type).lastIndexOf('reset');
+                    if (lastResetIndex !== -1) {
+                        // 確保轉為時間戳記數字
+                        const resetTime = new Date(logs.value[lastResetIndex].time).getTime();
+                        if (resetTime >= todayTimestamp) {
+                            currentSessionStartTime = resetTime;
+                        }
+                    }
+
                     const result = [];
                     allPlayerNames.forEach(name => {
                         let totalScore = 0; // 生涯總分
@@ -257,16 +268,17 @@
                         let totalTai = 0;
                         
                         logs.value.forEach(log => {
-                            if (log.type === 'draw') return;
-                            
+                            if (log.type === 'draw' || log.type == 'reset') return;
+
+                            const logTime = new Date(log.time).getTime(); // 確保時間轉成數字
                             // 計算這筆紀錄的得分
                             const delta = calculateTransaction(log, name);
                             
                             // 加總進生涯總分
                             totalScore += delta;
 
-                            // 如果是今天發生的，也加總進今日總分
-                            if (log.time >= todayTimestamp) {
+                            // ★ 只要時間大於「本局開始時間」，就算入今日成績
+                            if (logTime >= currentSessionStartTime) {
                                 todayScore += delta;
                             }
 
