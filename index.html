@@ -77,7 +77,8 @@
             <button @click="shuffleSeats" class="bg-purple-600 text-white px-4 py-2 rounded shadow shrink-0 text-sm">🎲 抓位</button>
             <button @click="addDrawRecord" class="bg-gray-600 text-white px-4 py-2 rounded shadow shrink-0 text-sm">💨 臭莊(連莊)</button>
             <button @click="manualResetDealer" class="bg-orange-800 text-orange-100 px-4 py-2 rounded shadow shrink-0 text-sm">🔄 強制下莊</button>
-            <button @click="resetDB" class="bg-red-900 text-red-200 px-4 py-2 rounded shadow shrink-0 ml-auto text-xs">重置記分板</button>
+            <button @click="resetToday"class="bg-red-900 text-red-200 px-4 py-2 rounded shadow shrink-0 ml-auto text-xs">重置記分板</button>
+            <button @click="resetDB" class="bg-red-900 text-red-200 px-4 py-2 rounded shadow shrink-0 ml-auto text-xs">清空今天歷史紀錄</button>
         </section>
 
         <div v-if="matchState.isOpen" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
@@ -212,6 +213,8 @@
                             dealerCount.value = data.dealer_count;
                             settings.value.base = data.base;
                             settings.value.point = data.point;
+
+                            fetchLogs();
                         })
                         .subscribe();
                 };
@@ -234,8 +237,21 @@
                         .select('*')
                         .gte('time', todayTimestamp)
                         .order('time', { ascending: true });
-                    
-                    if (!error) logs.value = data || [];
+
+
+                    if (!error && data) {
+                        // ★ 尋找今天有沒有人按過「開新局 (reset)」
+                        const lastResetIndex = data.map(log => log.type).lastIndexOf('reset');
+                        
+                        if (lastResetIndex !== -1) {
+                            // 如果有找到，就只保留這個書籤「之後」的真實紀錄
+                            logs.value = data.slice(lastResetIndex + 1);
+                        } else {
+                            // 如果今天沒人按過重置，就全部顯示
+                            logs.value = data;
+                        }
+                    }
+
                     isLoading.value = false;
                 };
 
@@ -267,7 +283,34 @@
                     logs.value = [];
                     dealerIndex.value = 0;
                     dealerCount.value = 0;
+                    currentSeats.value = ['玩家A', '玩家B', '玩家C', '玩家D'];
                     syncGameState(); // 同步重置狀態給所有人
+                    isLoading.value = false;
+                   
+                };
+
+                const resetToday = async () => {
+                    if(!confirm("警告：目前檯面紀錄將歸零（資料庫的歷史紀錄會保留）。")) return;
+                    isLoading.value = true;
+                    
+                    // 1. 塞入一筆隱形的「切斷點」紀錄到資料庫
+                    await supabase_con.from('logs').insert([{
+                        id: Date.now(),
+                        time: Date.now(),
+                        type: 'reset' // 用這個特殊 type 當作新局的起點
+                    }]);
+                
+                    // 2. 重置檯面設定
+                    dealerIndex.value = 0;
+                    dealerCount.value = 0;
+                    currentSeats.value = ['玩家A', '玩家B', '玩家C', '玩家D'];
+                    
+                    // 3. 推送給其他玩家
+                    await syncGameState(); 
+                    
+                    // 4. 重新抓取資料 (這會觸發我們下一步寫的過濾機制)
+                    await fetchLogs();
+                
                     isLoading.value = false;
                 };
 
@@ -497,7 +540,7 @@
                     matchState, previewAmount, isLoading,
                     getPlayerScore, getPlayerStats,
                     setDealer, openWinModal, confirmRound,
-                    shuffleSeats, addDrawRecord, deleteLog, resetDB, manualResetDealer, saveLocalSettings
+                    shuffleSeats, addDrawRecord, deleteLog, resetDB, resetToday, manualResetDealer, saveLocalSettings
                 };
             }
         }).mount('#app');
