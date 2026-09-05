@@ -249,7 +249,7 @@
 
                     // ★ 新增：找出今天最後一次按「重新開局(reset)」的時間
                     let currentSessionStartTime = todayTimestamp;
-                    const lastResetIndex = logs.value.map(l => l.type).lastIndexOf('reset');
+                    const latestResetIndex = logs.value.findIndex(l => l.type === 'reset');
                     if (lastResetIndex !== -1) {
                         // 確保轉為時間戳記數字
                         const resetTime = new Date(logs.value[lastResetIndex].time).getTime();
@@ -349,15 +349,27 @@
                     return 'text-red-400';
                 };
 
-                const recentLogs = computed(() => logs.value.slice(0, 20));
-
+                // ★ 過濾掉 reset 標記，避免畫面跑版
+                const recentLogs = computed(() => logs.value.filter(l => l.type !== 'reset').slice(0, 20));
+                // ★ 補上這段：即時監聽資料庫變化
+                const listenToLogs = () => {
+                    supabase_con
+                        .channel('leaderboard_channel')
+                        .on('postgres_changes', { event: '*', schema: 'public', table: 'logs' }, () => {
+                            fetchHistory(); // 只要主畫面打完一局或按重置，這裡自動重抓最新資料！
+                        })
+                        .subscribe();
+                };
+                
+                // 把原本的 onMounted 替換成這樣：
                 onMounted(() => {
                     fetchHistory();
+                    listenToLogs(); // 啟動即時監聽
                 });
 
                 return {
                     isLoading, searchQuery, paginatedPlayers, currentPage, totalPages,
-                    nextPage, prevPage, getActualRank, getRankColor, getKdColor, recentLogs, showRecent
+                    nextPage, prevPage, getActualRank, getRankColor, getKdColor, recentLogs, showRecent, listenToLogs
                 };
             }
         }).mount('#app');
